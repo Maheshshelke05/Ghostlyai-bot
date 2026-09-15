@@ -1,0 +1,41 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: jobbot
+      POSTGRES_USER: jobbot
+      POSTGRES_PASSWORD: jobbot
+    ports: ["5432:5432"]
+    volumes: [pgdata_dev:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U jobbot"]
+      interval: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports: ["6379:6379"]
+    command: redis-server --appendonly yes
+    volumes: [redisdata_dev:/data]
+
+  api:
+    build: ../backend
+    restart: unless-stopped
+    env_file: ../.env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://jobbot:jobbot@postgres:5432/jobbot
+      REDIS_URL: redis://redis:6379/0
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    ports: ["8000:8000"]
+    volumes:
+      - ../backend:/app
+      - resumes_dev:/data/resumes
+    depends_on:
+      postgres: { condition: service_healthy }
+
+volumes:
+  pgdata_dev: {}
+  redisdata_dev: {}
+  resumes_dev: {}
