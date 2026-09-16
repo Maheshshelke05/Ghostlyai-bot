@@ -46,9 +46,20 @@ jobs:
         run: npx expo prebuild --platform android
 
       - name: Decode release keystore
-        run: echo "$ANDROID_RELEASE_KEYSTORE_BASE64" | base64 -d > android/app/release.keystore
+        run: |
+          echo "$ANDROID_RELEASE_KEYSTORE_BASE64" | tr -d '[:space:]' | base64 -d -i > android/app/release.keystore
+          SIZE=$(stat -c%s android/app/release.keystore)
+          echo "Decoded keystore size: $SIZE bytes"
+          if [ "$SIZE" -lt 500 ]; then
+            echo "::error::Decoded keystore is suspiciously small ($SIZE bytes) - the ANDROID_RELEASE_KEYSTORE_BASE64 secret is likely truncated or corrupted. Re-copy the full contents of keystore-b64-output.txt and update the secret."
+            exit 1
+          fi
+          keytool -list -keystore android/app/release.keystore -storepass "$ANDROID_RELEASE_KEYSTORE_PASSWORD" -alias "$ANDROID_RELEASE_KEY_ALIAS" > /dev/null
+          echo "Keystore verified: alias '$ANDROID_RELEASE_KEY_ALIAS' found and readable."
         env:
           ANDROID_RELEASE_KEYSTORE_BASE64: ${{ secrets.ANDROID_RELEASE_KEYSTORE_BASE64 }}
+          ANDROID_RELEASE_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_RELEASE_KEYSTORE_PASSWORD }}
+          ANDROID_RELEASE_KEY_ALIAS: ${{ secrets.ANDROID_RELEASE_KEY_ALIAS }}
 
       - name: Grant execute permission for gradlew
         run: chmod +x android/gradlew
