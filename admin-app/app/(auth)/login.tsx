@@ -6,7 +6,7 @@ import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput,
 import { z } from "zod";
 
 import { Button } from "@/components/ui/Button";
-import { apiErrorMessage } from "@/lib/api";
+import { API_URL, apiErrorMessage, checkBackendConnection } from "@/lib/api";
 import { useAuthStore } from "@/store/auth";
 
 const schema = z.object({
@@ -21,6 +21,16 @@ export default function LoginScreen() {
   const [serverError, setServerError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [shakeKey, setShakeKey] = useState(0);
+  const [checking, setChecking] = useState(false);
+  const [checkResult, setCheckResult] = useState<{ ok: boolean; detail: string } | null>(null);
+
+  const runConnectionCheck = async () => {
+    setChecking(true);
+    setCheckResult(null);
+    const result = await checkBackendConnection();
+    setCheckResult(result);
+    setChecking(false);
+  };
 
   const {
     control,
@@ -108,6 +118,23 @@ export default function LoginScreen() {
 
             <View className="mt-3">
               <Button label="Login" onPress={handleSubmit(onSubmit)} loading={loading} variant="primary" />
+            </View>
+
+            <View className="mt-6 items-center">
+              <Pressable onPress={runConnectionCheck} hitSlop={10}>
+                <Text className="text-xs text-muted underline">
+                  {checking ? "Checking..." : "Server connection check kara"}
+                </Text>
+              </Pressable>
+              <Text className="text-[10px] text-muted/70 mt-1 text-center">{API_URL}</Text>
+              {checkResult ? (
+                <Text
+                  className={`text-xs mt-2 text-center ${checkResult.ok ? "text-go" : "text-danger"}`}
+                >
+                  {checkResult.ok ? "✓ Server reachable — " : "✗ Server la pochu shaklo nahi — "}
+                  {checkResult.detail}
+                </Text>
+              ) : null}
             </View>
           </MotiView>
         </View>

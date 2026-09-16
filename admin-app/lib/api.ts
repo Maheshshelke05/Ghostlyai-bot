@@ -44,10 +44,24 @@ export function apiErrorMessage(error: unknown, fallback = "Something went wrong
   if (axios.isAxiosError(error)) {
     const detail = (error.response?.data as { detail?: string } | undefined)?.detail;
     if (typeof detail === "string") return detail;
+    if (error.code === "ECONNABORTED") return `Server jaste time gheत ahe (timeout) - ${API_URL} la connect karat aslela request 20 sec madhe pura zala nahi.`;
+    if (error.request && !error.response) return `Server la pochu shaklo nahi (${API_URL}). Internet/WiFi check kar, kiva he network ha domain block karat asel.`;
     if (error.message) return error.message;
   }
   return fallback;
 }
+
+/** Direct, no-auth connectivity probe used by the login screen's diagnostics panel. */
+export async function checkBackendConnection(): Promise<{ ok: boolean; detail: string }> {
+  try {
+    const res = await axios.get(`${API_URL}/health`, { timeout: 8000 });
+    return { ok: true, detail: `${res.status} ${JSON.stringify(res.data)}` };
+  } catch (err) {
+    return { ok: false, detail: apiErrorMessage(err) };
+  }
+}
+
+export { API_URL };
 
 // ---------------------------------------------------------------------------
 // Types

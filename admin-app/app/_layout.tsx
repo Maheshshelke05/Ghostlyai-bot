@@ -14,10 +14,12 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { OfflineBanner } from "@/components/OfflineBanner";
 import { ToastProvider } from "@/components/ui/Toast";
+import { installCrashHandler } from "@/lib/crashHandler";
 import { queryClient } from "@/lib/query-client";
 import { useAuthStore } from "@/store/auth";
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
+installCrashHandler();
 
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({
