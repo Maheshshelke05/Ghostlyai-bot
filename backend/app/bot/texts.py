@@ -58,6 +58,7 @@ TEXTS: dict[str, dict[str, str]] = {
             "/jobs - आत्ताचे jobs पाहा\n/profile - प्रोफाइल\n/subscribe - Subscription"
         ),
         "profile_done_no_trial": "✅ प्रोफाइल अपडेट झाली!",
+        "language_changed": "✅ भाषा बदलली!",
         "digest_header": "🔔 आजचे तुमच्यासाठी {count} jobs",
         "job_line": "{n}. {title}\n🏢 {company}\n📍 {location} • {job_type}{qualification}{salary}{last_date}",
         "qualification_part": "\n🎓 {qualification}",
@@ -156,6 +157,7 @@ TEXTS: dict[str, dict[str, str]] = {
             "/jobs - अभी की jobs\n/profile - प्रोफाइल\n/subscribe - Subscription"
         ),
         "profile_done_no_trial": "✅ प्रोफाइल अपडेट हो गई!",
+        "language_changed": "✅ भाषा बदल गई!",
         "digest_header": "🔔 आज आपके लिए {count} jobs",
         "job_line": "{n}. {title}\n🏢 {company}\n📍 {location} • {job_type}{qualification}{salary}{last_date}",
         "qualification_part": "\n🎓 {qualification}",
@@ -254,6 +256,7 @@ TEXTS: dict[str, dict[str, str]] = {
             "/jobs - jobs right now\n/profile - your profile\n/subscribe - subscription"
         ),
         "profile_done_no_trial": "✅ Profile updated!",
+        "language_changed": "✅ Language changed!",
         "digest_header": "🔔 {count} jobs for you today",
         "job_line": "{n}. {title}\n🏢 {company}\n📍 {location} • {job_type}{qualification}{salary}{last_date}",
         "qualification_part": "\n🎓 {qualification}",

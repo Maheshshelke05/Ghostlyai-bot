@@ -105,9 +105,13 @@ async def on_language(
     data = await state.get_data()
     mode = data.get("mode", Mode.ONBOARDING)
 
-    if mode == Mode.LANGUAGE_ONLY or (user.status == "active" and user.category_links):
+    if mode == Mode.LANGUAGE_ONLY:
+        profile_done = user.status == "active" and bool(user.category_links)
         await state.clear()
-        await callback.message.edit_text(t(code, "profile_done_no_trial"))
+        text = t(code, "profile_done_no_trial") if profile_done else t(code, "language_changed")
+        if not profile_done:
+            text = f"{text}\n\n{t(code, 'finish_onboarding')}"
+        await callback.message.edit_text(text)
         return
 
     await state.set_state(Onboarding.name)
