@@ -70,13 +70,19 @@ class Base(DeclarativeBase):
     pass
 
 
+# BigInteger primary keys: SQLite only auto-generates rowid values for columns whose
+# declared type is the literal token "INTEGER" (not "BIGINT"), so tests running against
+# SQLite need the variant below; Postgres still gets a real BIGSERIAL/bigint column.
+BigIntPK = BigInteger().with_variant(Integer(), "sqlite")
+
+
 # ---------------------------------------------------------------------------
 # users
 # ---------------------------------------------------------------------------
 class User(Base):
     __tablename__ = "users"
 
-    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    id: Mapped[int] = mapped_column(BigIntPK, primary_key=True)
     telegram_id: Mapped[int] = mapped_column(BigInteger, unique=True, nullable=False)
     username: Mapped[Optional[str]] = mapped_column(String(64))
     full_name: Mapped[Optional[str]] = mapped_column(String(120))
@@ -127,7 +133,7 @@ class User(Base):
 class Profile(Base):
     __tablename__ = "profiles"
 
-    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    id: Mapped[int] = mapped_column(BigIntPK, primary_key=True)
     user_id: Mapped[int] = mapped_column(
         BigInteger, ForeignKey("users.id", ondelete="CASCADE"), unique=True, nullable=False
     )
@@ -196,7 +202,7 @@ class Admin(Base):
 class Job(Base):
     __tablename__ = "jobs"
 
-    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    id: Mapped[int] = mapped_column(BigIntPK, primary_key=True)
     category_id: Mapped[int] = mapped_column(Integer, ForeignKey("categories.id"), nullable=False)
     admin_id: Mapped[Optional[int]] = mapped_column(
         Integer, ForeignKey("admins.id", ondelete="SET NULL")
@@ -240,7 +246,7 @@ class Job(Base):
 class JobDelivery(Base):
     __tablename__ = "job_deliveries"
 
-    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    id: Mapped[int] = mapped_column(BigIntPK, primary_key=True)
     job_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("jobs.id", ondelete="CASCADE"))
     user_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("users.id", ondelete="CASCADE"))
     sent_at: Mapped[datetime] = mapped_column(TZDateTime, nullable=False, default=utcnow)
@@ -258,7 +264,7 @@ class JobDelivery(Base):
 class Subscription(Base):
     __tablename__ = "subscriptions"
 
-    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    id: Mapped[int] = mapped_column(BigIntPK, primary_key=True)
     user_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("users.id", ondelete="CASCADE"))
     start_at: Mapped[datetime] = mapped_column(TZDateTime, nullable=False)
     end_at: Mapped[datetime] = mapped_column(TZDateTime, nullable=False)
@@ -273,7 +279,7 @@ class Subscription(Base):
 class Payment(Base):
     __tablename__ = "payments"
 
-    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    id: Mapped[int] = mapped_column(BigIntPK, primary_key=True)
     user_id: Mapped[Optional[int]] = mapped_column(
         BigInteger, ForeignKey("users.id", ondelete="SET NULL")
     )
@@ -306,7 +312,7 @@ class AppSetting(Base):
 class Broadcast(Base):
     __tablename__ = "broadcasts"
 
-    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    id: Mapped[int] = mapped_column(BigIntPK, primary_key=True)
     admin_id: Mapped[Optional[int]] = mapped_column(
         Integer, ForeignKey("admins.id", ondelete="SET NULL")
     )
