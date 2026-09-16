@@ -72,8 +72,16 @@ const NewStaffSheet = forwardRef<BottomSheetModal, { renderBackdrop: (props: any
     const [loading, setLoading] = useState(false);
 
     const submit = async () => {
-      if (!name.trim() || !email.trim() || password.length < 8) {
-        show("Naav, email aani 8+ akshari password bhara", "warn");
+      if (!name.trim()) {
+        show("Naav bhara", "warn");
+        return;
+      }
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+        show("Valid email bhara", "warn");
+        return;
+      }
+      if (password.length < 8) {
+        show("Password 8+ akshari asava", "warn");
         return;
       }
       setLoading(true);

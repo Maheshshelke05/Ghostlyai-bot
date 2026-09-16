@@ -106,13 +106,21 @@ const CategoryEditSheet = forwardRef<
   }, [category]);
 
   const submit = async () => {
-    if (!name.trim() || (!category && !slug.trim())) return;
+    if (!name.trim()) {
+      show("Name bhara", "warn");
+      return;
+    }
+    const normalizedSlug = slug.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+    if (!category && !normalizedSlug) {
+      show("Valid slug bhara (e.g. banking)", "warn");
+      return;
+    }
     setLoading(true);
     try {
       if (category) {
         await updateCategory(category.id, { name: name.trim(), name_mr: nameMr, name_hi: nameHi });
       } else {
-        await createCategory({ slug: slug.trim(), name: name.trim(), name_mr: nameMr, name_hi: nameHi });
+        await createCategory({ slug: normalizedSlug, name: name.trim(), name_mr: nameMr, name_hi: nameHi });
       }
       queryClient.invalidateQueries({ queryKey: ["categories"] });
       show("Category save zali", "success");

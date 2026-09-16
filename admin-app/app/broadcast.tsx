@@ -92,10 +92,12 @@ export default function BroadcastScreen() {
           value={text}
           onChangeText={setText}
           multiline
+          maxLength={4000}
           placeholder="Type your broadcast message (HTML tags like <b> allowed)"
-          className="bg-surface border border-line rounded-2xl px-4 py-3.5 text-ink mb-3"
+          className="bg-surface border border-line rounded-2xl px-4 py-3.5 text-ink mb-1"
           style={{ minHeight: 120, textAlignVertical: "top" }}
         />
+        <Text className="text-xs text-muted mb-3 text-right">{text.length}/4000</Text>
 
         {text.trim() ? (
           <View className="bg-[#DCF8C6] rounded-2xl rounded-tr-sm p-3 mb-4 self-end max-w-[85%]">

@@ -40,6 +40,26 @@ export default function SettingsScreen() {
   const set = <K extends keyof SettingsData>(key: K, value: SettingsData[K]) =>
     setForm((f) => (f ? { ...f, [key]: value } : f));
 
+  const validationError = (f: SettingsData): string | null => {
+    if (f.price_inr <= 0) return "Price 0 pekshaa jaast asava";
+    if (f.subscription_days <= 0) return "Subscription divas 0 pekshaa jaast asave";
+    if (f.trial_days < 0) return "Trial divas negative nasave";
+    if (f.digest_max_jobs <= 0 || f.digest_max_jobs > 50) return "Jobs per digest 1-50 madhe asave";
+    if (f.max_categories <= 0 || f.max_categories > 10) return "Max categories 1-10 madhe asave";
+    if (f.teaser_every_hours <= 0) return "Teaser hours 0 pekshaa jaast asave";
+    if (f.digest_times.length === 0) return "Kimaan ek digest time add kara";
+    return null;
+  };
+
+  const save = () => {
+    const error = validationError(form);
+    if (error) {
+      show(error, "warn");
+      return;
+    }
+    saveMutation.mutate(form);
+  };
+
   const addTime = (date: Date) => {
     const hh = String(date.getHours()).padStart(2, "0");
     const mm = String(date.getMinutes()).padStart(2, "0");
@@ -110,7 +130,7 @@ export default function SettingsScreen() {
       </ScrollView>
 
       <View className="absolute bottom-0 left-0 right-0 bg-background border-t border-line px-4 pt-3 pb-6">
-        <Button label="Save" onPress={() => saveMutation.mutate(form)} loading={saveMutation.isPending} />
+        <Button label="Save" onPress={save} loading={saveMutation.isPending} />
       </View>
     </View>
   );

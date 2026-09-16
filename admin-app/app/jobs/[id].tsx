@@ -77,7 +77,28 @@ export default function JobEditScreen() {
           }}
         />
 
-        <View className="px-4 mt-2">
+        <View className="px-4 mt-2 gap-3">
+          <Button
+            label="📋 Duplicate as new job"
+            variant="ghost"
+            onPress={() =>
+              router.push({
+                pathname: "/jobs/new",
+                params: {
+                  dup_title: job.title,
+                  dup_company: job.company,
+                  dup_category_slug: job.category_slug ?? "",
+                  dup_qualification: job.qualification ?? "",
+                  dup_district: job.district ?? "",
+                  dup_location_text: job.location_text ?? "",
+                  dup_job_type: job.job_type,
+                  dup_salary: job.salary ?? "",
+                  // apply_link and last_date are almost always specific to this exact
+                  // posting, so they're intentionally left blank on the duplicate.
+                },
+              })
+            }
+          />
           <Button label="Delete job" variant="danger" onPress={() => confirmRef.current?.present()} />
         </View>
       </ScrollView>
