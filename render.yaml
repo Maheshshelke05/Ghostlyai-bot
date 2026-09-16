@@ -1,16 +1,26 @@
 # Render Blueprint. Deploy: render.com -> New -> Blueprint -> pick this repo.
 #
+# Single FREE web service, no card required. The digest/reminders/expiry/broadcast scheduler
+# runs embedded inside this same process (RUN_SCHEDULER_IN_API=true) instead of as a separate
+# Render "worker" service - Render has no free tier for background workers at all, only for web
+# services, so this is what makes a $0 deployment possible. Trade-off: Render's free web
+# services spin down after 15 minutes with no incoming HTTP traffic, and while asleep NO code
+# runs at all (not even the scheduler) - see docs/DEPLOY_RENDER.md for the free external
+# keep-alive ping this depends on to actually hit the 09:00/18:00 IST digest times reliably, and
+# for how to split this back into a separate paid worker service once real revenue justifies it
+# (a few line changes, no code changes needed).
+#
 # Uses external managed Postgres (Neon) and Redis (Upstash) rather than Render's own
-# database/key-value services, since that's what this project is already configured for -
-# no databases: or keyvalue service block needed here. Every sync:false var below is left
-# for you to fill in through the Render dashboard the first time the blueprint runs; nothing
-# secret is stored in this file.
+# database/key-value services, since that's what this project is already configured for - no
+# databases: or keyvalue service block needed here. Every sync:false var below is left for you
+# to fill in through the Render dashboard the first time the blueprint runs; nothing secret is
+# stored in this file.
 
 services:
   - type: web
     name: ghostlyai-api
     runtime: docker
-    plan: starter
+    plan: free
     region: singapore
     dockerfilePath: ./backend/Dockerfile
     dockerContext: ./backend
@@ -18,6 +28,8 @@ services:
     envVars:
       - key: APP_ENV
         value: production
+      - key: RUN_SCHEDULER_IN_API
+        value: "true"
       # Custom domain (api.ghotlyai.in) - set explicitly rather than relying on Render's
       # auto-injected RENDER_EXTERNAL_URL, which keeps showing the *.onrender.com address
       # even after a custom domain is attached. See docs/DEPLOY_RENDER.md for the Cloudflare
@@ -56,49 +68,5 @@ services:
         value: "72"
       - key: CLOUDINARY_URL
         sync: false # cloudinary://<api_key>:<api_secret>@<cloud_name>, from cloudinary.com dashboard
-      - key: MAX_RESUME_MB
-        value: "10"
-
-  - type: worker
-    name: ghostlyai-worker
-    runtime: docker
-    plan: starter
-    region: singapore
-    dockerfilePath: ./backend/Dockerfile
-    dockerContext: ./backend
-    dockerCommand: python -m app.workers.scheduler
-    envVars:
-      - key: APP_ENV
-        value: production
-      - key: TIMEZONE
-        value: Asia/Kolkata
-      # The worker has no public URL of its own (only the api service does), but it needs to
-      # know the api's public URL to build correct tracking links in digest messages.
-      - key: BASE_URL
-        value: https://api.ghotlyai.in
-      - key: DATABASE_URL
-        sync: false
-      - key: REDIS_URL
-        sync: false
-      - key: BOT_TOKEN
-        sync: false
-      - key: SUPPORT_USERNAME
-        sync: false
-      - key: ADMIN_ALERT_CHAT_ID
-        sync: false
-      - key: GEMINI_API_KEY
-        sync: false
-      - key: GEMINI_MODEL
-        value: gemini-3.8-flash
-      - key: RAZORPAY_KEY_ID
-        sync: false
-      - key: RAZORPAY_KEY_SECRET
-        sync: false
-      - key: RAZORPAY_WEBHOOK_SECRET
-        sync: false
-      - key: JWT_SECRET
-        sync: false
-      - key: CLOUDINARY_URL
-        sync: false
       - key: MAX_RESUME_MB
         value: "10"

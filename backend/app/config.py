@@ -50,6 +50,15 @@ class Settings(BaseSettings):
     # ---------- Cloudinary (resume storage; optional, falls back to local disk) ----------
     CLOUDINARY_URL: str = ""
 
+    # ---------- Scheduler ----------
+    # When true, the API process itself runs the APScheduler jobs (digest, reminders, expiry,
+    # broadcasts) in-process instead of expecting a separate `app.workers.scheduler` process.
+    # For a single free-tier web service with no paid background worker (Render's free plan has
+    # no worker option at all) - NEVER combine with more than one uvicorn worker process
+    # (`--workers N > 1`), each would run its own copy of every scheduled job and send every
+    # digest N times.
+    RUN_SCHEDULER_IN_API: bool = False
+
     @property
     def tz(self) -> ZoneInfo:
         return ZoneInfo(self.TIMEZONE)

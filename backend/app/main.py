@@ -90,9 +90,19 @@ async def lifespan(app: FastAPI):
         except Exception:  # noqa: BLE001
             logger.exception("Failed to set Telegram webhook")
 
+    embedded_scheduler = None
+    if settings.RUN_SCHEDULER_IN_API:
+        from app.workers.scheduler import build_scheduler
+
+        embedded_scheduler = build_scheduler()
+        embedded_scheduler.start()
+        logger.info("Embedded scheduler started (RUN_SCHEDULER_IN_API=true)")
+
     yield
 
     logger.info("Shutting down API")
+    if embedded_scheduler is not None:
+        embedded_scheduler.shutdown(wait=False)
     try:
         from app.bot.loader import get_bot
 
