@@ -63,7 +63,7 @@ export function ExcelUploadTab() {
     <View className="p-4">
       <Text className="text-sm text-muted mb-3">
         Template download kara, jobs bhara, mag file upload kara. Columns: title, company,
-        category_slug, qualification, district, location_text, job_type, salary, apply_link,
+        category_slug, qualification, location_text, job_type, salary, apply_link,
         last_date, description.
       </Text>
 

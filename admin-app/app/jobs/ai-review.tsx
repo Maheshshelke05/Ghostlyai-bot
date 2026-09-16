@@ -15,7 +15,6 @@ function toJobIn(d: ReturnType<typeof useAiDraftsStore.getState>["drafts"][numbe
     company: d.company ?? "",
     category_slug: d.category_slug || "other",
     qualification: d.qualification,
-    district: d.district,
     location_text: d.location_text,
     job_type: d.job_type,
     salary: d.salary,
@@ -98,11 +97,6 @@ export default function AiReviewScreen() {
                 value={draft.apply_link ?? ""}
                 error={missingLink}
                 onChange={(v) => updateDraft(index, { ...draft, apply_link: v })}
-              />
-              <DraftField
-                label="District"
-                value={draft.district ?? ""}
-                onChange={(v) => updateDraft(index, { ...draft, district: v || null })}
               />
             </View>
           );

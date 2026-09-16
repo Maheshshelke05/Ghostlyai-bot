@@ -15,10 +15,8 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.bot.keyboards import (
-    OTHER_DISTRICT,
     categories_kb,
     confirm_kb,
-    district_kb,
     job_types_kb,
     language_kb,
     phone_kb,
@@ -133,8 +131,8 @@ async def on_name(message: Message, state: FSMContext, db: AsyncSession, user: U
     await db.flush()
 
     if user.phone:
-        await state.set_state(Onboarding.district)
-        await message.answer(t(lang, "ask_district"), reply_markup=district_kb(lang))
+        await state.set_state(Onboarding.resume)
+        await _ask_resume(message, lang)
         return
 
     await state.set_state(Onboarding.phone)
@@ -155,9 +153,9 @@ async def on_phone(message: Message, state: FSMContext, db: AsyncSession, user: 
     user.phone = normalize_phone(contact.phone_number)
     await db.flush()
 
-    await state.set_state(Onboarding.district)
     await message.answer(t(lang, "use_button"), reply_markup=remove_kb())
-    await message.answer(t(lang, "ask_district"), reply_markup=district_kb(lang))
+    await state.set_state(Onboarding.resume)
+    await _ask_resume(message, lang)
 
 
 @router.message(Onboarding.phone)
@@ -166,52 +164,8 @@ async def on_phone_invalid(message: Message, state: FSMContext, db: AsyncSession
     await message.answer(t(lang, "phone_not_own"), reply_markup=phone_kb(lang))
 
 
-# ---------------------------------------------------------------------------
-# District
-# ---------------------------------------------------------------------------
 async def _ask_resume(message: Message, lang: str) -> None:
     await message.answer(t(lang, "ask_resume"), reply_markup=resume_kb(lang))
-
-
-@router.callback_query(Onboarding.district, F.data.startswith("dist:"))
-async def on_district_choice(
-    callback: CallbackQuery, state: FSMContext, db: AsyncSession, user: User
-) -> None:
-    lang = user.language or "mr"
-    value = callback.data.split(":", 1)[1]
-    await callback.answer()
-
-    if value == OTHER_DISTRICT:
-        await state.set_state(Onboarding.district_text)
-        await callback.message.edit_text(t(lang, "type_district"))
-        return
-
-    user.district = value
-    await db.flush()
-    await state.set_state(Onboarding.resume)
-    await callback.message.edit_reply_markup(reply_markup=None)
-    await _ask_resume(callback.message, lang)
-
-
-@router.message(Onboarding.district_text, F.text)
-async def on_district_text(message: Message, state: FSMContext, db: AsyncSession, user: User) -> None:
-    lang = user.language or "mr"
-    raw = (message.text or "").strip()
-    canon = canonical_district(raw)
-    user.district = canon if canon else raw.title()
-    await db.flush()
-
-    await state.set_state(Onboarding.resume)
-    await _ask_resume(message, lang)
-
-
-@router.message(Onboarding.district)
-async def on_district_fallback(message: Message, state: FSMContext, db: AsyncSession, user: User) -> None:
-    lang = user.language or "mr"
-    if message.text:
-        await on_district_text(message, state, db, user)
-        return
-    await message.answer(t(lang, "use_button"))
 
 
 # ---------------------------------------------------------------------------

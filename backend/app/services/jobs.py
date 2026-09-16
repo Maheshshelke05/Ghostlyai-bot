@@ -11,13 +11,12 @@ from sqlalchemy import and_, exists, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models import Job, JobDelivery, User, utcnow
-from app.services.districts import canonical_district
 
 JOB_TYPES = ("govt", "private", "internship", "wfh")
 
 REQUIRED_FIELDS = ("title", "company", "category_slug", "apply_link")
 BULK_COLUMNS = (
-    "title", "company", "category_slug", "qualification", "district", "location_text",
+    "title", "company", "category_slug", "qualification", "location_text",
     "job_type", "salary", "apply_link", "last_date", "description",
 )
 
@@ -70,12 +69,6 @@ def validate_job_row(row: dict[str, Any], categories: dict[str, int]) -> dict[st
     if job_type not in JOB_TYPES:
         raise ValueError(f"job_type must be one of {JOB_TYPES}")
 
-    district_raw = row.get("district")
-    district: str | None = None
-    if district_raw and str(district_raw).strip():
-        canon = canonical_district(str(district_raw))
-        district = canon if canon else str(district_raw).strip().title()
-
     last_date_raw = row.get("last_date")
     try:
         last_date = parse_date(last_date_raw)
@@ -92,7 +85,6 @@ def validate_job_row(row: dict[str, Any], categories: dict[str, int]) -> dict[st
         "title": title,
         "company": company,
         "qualification": qualification,
-        "district": district,
         "location_text": location_text,
         "job_type": job_type,
         "salary": salary,
@@ -142,7 +134,7 @@ def csv_template() -> bytes:
     writer.writerow(BULK_COLUMNS)
     writer.writerow([
         "Junior Accountant", "Shree Traders Pvt Ltd", "accounts-finance", "B.Com, Tally",
-        "Nagpur", "Sitabuldi", "private", "₹12,000 – ₹15,000",
+        "Sitabuldi, Nagpur", "private", "₹12,000 – ₹15,000",
         "https://example.com/apply/123", "30-09-2026", "2 openings, Saturday half day",
     ])
     return output.getvalue().encode("utf-8-sig")
@@ -166,14 +158,6 @@ def matching_jobs_stmt(user: User, limit: int, days_window: int = 7):
     ]
     if user.job_types:
         conditions.append(Job.job_type.in_(user.job_types))
-    if user.district:
-        conditions.append(
-            or_(
-                Job.district.is_(None),
-                Job.job_type == "wfh",
-                Job.district == user.district,
-            )
-        )
 
     stmt = (
         select(Job)

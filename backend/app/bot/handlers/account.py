@@ -73,7 +73,6 @@ def _profile_text(user: User, lang: str) -> str:
         lang, "profile_view",
         name=html.escape(user.full_name or "-"),
         phone=html.escape(user.phone or "-"),
-        district=html.escape(user.district or t(lang, "any_location")),
         education=html.escape(profile.education if profile else "") or t(lang, "not_given"),
         course=html.escape(profile.course if profile and profile.course else t(lang, "not_given")),
         categories=html.escape(categories),

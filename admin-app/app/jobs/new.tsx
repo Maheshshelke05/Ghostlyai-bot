@@ -22,7 +22,6 @@ export default function NewJobScreen() {
     dup_company?: string;
     dup_category_slug?: string;
     dup_qualification?: string;
-    dup_district?: string;
     dup_location_text?: string;
     dup_job_type?: string;
     dup_salary?: string;
@@ -37,7 +36,6 @@ export default function NewJobScreen() {
         company: params.dup_company,
         category_slug: params.dup_category_slug || undefined,
         qualification: params.dup_qualification,
-        district: params.dup_district,
         location_text: params.dup_location_text,
         job_type: (params.dup_job_type as JobFormData["job_type"]) || undefined,
         salary: params.dup_salary,

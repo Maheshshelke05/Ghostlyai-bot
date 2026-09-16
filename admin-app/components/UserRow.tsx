@@ -27,7 +27,7 @@ export function UserRow({ user }: { user: UserRowType }) {
           {user.full_name || "Unnamed"}
         </Text>
         <Text className="text-xs text-muted mt-0.5" numberOfLines={1}>
-          {user.district || "Kuthehi"} • {user.categories.join(", ") || "No categories"}
+          {user.categories.join(", ") || "No categories"}
         </Text>
       </View>
       <AccessBadge access={user.access} />

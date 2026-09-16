@@ -7,30 +7,19 @@ from app.services.jobs import matching_jobs
 from tests.conftest import make_job, make_user
 
 
-async def test_category_and_district_match(db, categories):
-    user = await make_user(db, district="Nagpur", category_slugs=["accounts-finance"])
-    await make_job(db, categories, category_slug="accounts-finance", district="Nagpur")
+async def test_category_match(db, categories):
+    user = await make_user(db, category_slugs=["accounts-finance"])
+    await make_job(db, categories, category_slug="accounts-finance")
     jobs = await matching_jobs(db, user, limit=10)
     assert len(jobs) == 1
 
 
-async def test_other_district_but_job_district_null_matches(db, categories):
-    user = await make_user(db, district="Pune", category_slugs=["accounts-finance"])
-    await make_job(db, categories, category_slug="accounts-finance", district=None)
-    jobs = await matching_jobs(db, user, limit=10)
-    assert len(jobs) == 1
-
-
-async def test_other_district_office_job_does_not_match(db, categories):
+async def test_district_is_not_considered_for_matching(db, categories):
+    """Matching is category + job_type + recency only - district plays no part, so jobs
+    reach every matching user regardless of either side's district (Chapter 10.1 update:
+    the product is no longer Maharashtra-only, so geographic filtering was removed)."""
     user = await make_user(db, district="Pune", category_slugs=["accounts-finance"])
     await make_job(db, categories, category_slug="accounts-finance", district="Nagpur", job_type="private")
-    jobs = await matching_jobs(db, user, limit=10)
-    assert len(jobs) == 0
-
-
-async def test_wfh_job_matches_regardless_of_district(db, categories):
-    user = await make_user(db, district="Pune", category_slugs=["accounts-finance"])
-    await make_job(db, categories, category_slug="accounts-finance", district="Nagpur", job_type="wfh")
     jobs = await matching_jobs(db, user, limit=10)
     assert len(jobs) == 1
 

@@ -12,9 +12,6 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from app.bot.texts import LANGUAGES, t
 from app.db.models import Category
-from app.services.districts import TOP_DISTRICTS
-
-OTHER_DISTRICT = "__other__"
 
 
 def language_kb() -> InlineKeyboardMarkup:
@@ -36,15 +33,6 @@ def phone_kb(lang: str) -> ReplyKeyboardMarkup:
 
 def remove_kb() -> ReplyKeyboardRemove:
     return ReplyKeyboardRemove()
-
-
-def district_kb(lang: str) -> InlineKeyboardMarkup:
-    builder = InlineKeyboardBuilder()
-    for name in TOP_DISTRICTS:
-        builder.button(text=name, callback_data=f"dist:{name}")
-    builder.button(text=t(lang, "other_district_btn"), callback_data=f"dist:{OTHER_DISTRICT}")
-    builder.adjust(2)
-    return builder.as_markup()
 
 
 def resume_kb(lang: str) -> InlineKeyboardMarkup:

@@ -15,9 +15,6 @@ TEXTS: dict[str, dict[str, str]] = {
         "share_phone_btn": "📱 नंबर शेअर करा",
         "phone_not_own": "⚠️ कृपया स्वतःचा नंबर शेअर करा, खालील बटण वापरून.",
         "use_button": "👇 कृपया खालील बटण वापरा.",
-        "ask_district": "📍 तुमचा जिल्हा निवडा किंवा टाईप करा:",
-        "other_district_btn": "✍️ दुसरा जिल्हा",
-        "type_district": "✍️ तुमच्या जिल्ह्याचं नाव टाईप करा:",
         "ask_resume": "📄 तुमचा Resume पाठवा\nPDF, Word (DOCX) किंवा resume चा स्पष्ट फोटो चालेल.",
         "no_resume_btn": "❌ माझ्याकडे resume नाही",
         "resume_checking": "⏳ Resume तपासत आहे... 10-20 सेकंद लागतील.",
@@ -87,7 +84,7 @@ TEXTS: dict[str, dict[str, str]] = {
         "status_trial": "🎁 Free trial चालू: {until} पर्यंत",
         "status_none": "❌ Subscription नाही",
         "profile_view": (
-            "👤 {name}\n📱 {phone}\n📍 {district}\n🎓 {education}\n📚 {course}\n"
+            "👤 {name}\n📱 {phone}\n🎓 {education}\n📚 {course}\n"
             "💼 Categories: {categories}\n🏢 प्रकार: {job_types}\n\n{status}"
         ),
         "edit_profile_btn": "✏️ प्रोफाइल बदला",
@@ -104,7 +101,6 @@ TEXTS: dict[str, dict[str, str]] = {
         "finish_onboarding": "👉 आधी प्रोफाइल पूर्ण करा. /start दाबा.",
         "any_location": "कुठेही",
         "not_given": "-",
-        "other_district_value": "__other__",
     },
     "hi": {
         "choose_language": "🙏 नमस्ते! Job Alert Bot में आपका स्वागत है.\n\nअपनी भाषा चुनें / Choose your language:",
@@ -114,9 +110,6 @@ TEXTS: dict[str, dict[str, str]] = {
         "share_phone_btn": "📱 नंबर शेयर करें",
         "phone_not_own": "⚠️ कृपया अपना नंबर शेयर करें, नीचे के बटन से.",
         "use_button": "👇 कृपया नीचे का बटन इस्तेमाल करें.",
-        "ask_district": "📍 अपना जिला चुनें या लिखें:",
-        "other_district_btn": "✍️ दूसरा जिला",
-        "type_district": "✍️ अपने जिले का नाम लिखें:",
         "ask_resume": "📄 अपना Resume भेजें\nPDF, Word (DOCX) या resume की साफ फोटो चलेगी.",
         "no_resume_btn": "❌ मेरे पास resume नहीं है",
         "resume_checking": "⏳ Resume जांच रहे हैं... 10-20 सेकंड लगेंगे.",
@@ -186,7 +179,7 @@ TEXTS: dict[str, dict[str, str]] = {
         "status_trial": "🎁 Free trial चालू: {until} तक",
         "status_none": "❌ Subscription नहीं है",
         "profile_view": (
-            "👤 {name}\n📱 {phone}\n📍 {district}\n🎓 {education}\n📚 {course}\n"
+            "👤 {name}\n📱 {phone}\n🎓 {education}\n📚 {course}\n"
             "💼 Categories: {categories}\n🏢 प्रकार: {job_types}\n\n{status}"
         ),
         "edit_profile_btn": "✏️ प्रोफाइल बदलें",
@@ -203,7 +196,6 @@ TEXTS: dict[str, dict[str, str]] = {
         "finish_onboarding": "👉 पहले प्रोफाइल पूरी करें. /start दबाएं.",
         "any_location": "कहीं भी",
         "not_given": "-",
-        "other_district_value": "__other__",
     },
     "en": {
         "choose_language": "🙏 Hello! Welcome to Job Alert Bot.\n\nChoose your language:",
@@ -213,9 +205,6 @@ TEXTS: dict[str, dict[str, str]] = {
         "share_phone_btn": "📱 Share number",
         "phone_not_own": "⚠️ Please share your own number using the button below.",
         "use_button": "👇 Please use the button below.",
-        "ask_district": "📍 Select or type your district:",
-        "other_district_btn": "✍️ Other district",
-        "type_district": "✍️ Type your district name:",
         "ask_resume": "📄 Send your Resume\nPDF, Word (DOCX) or a clear photo of your resume.",
         "no_resume_btn": "❌ I don't have a resume",
         "resume_checking": "⏳ Checking your resume... takes 10-20 seconds.",
@@ -285,7 +274,7 @@ TEXTS: dict[str, dict[str, str]] = {
         "status_trial": "🎁 Free trial until {until}",
         "status_none": "❌ No subscription",
         "profile_view": (
-            "👤 {name}\n📱 {phone}\n📍 {district}\n🎓 {education}\n📚 {course}\n"
+            "👤 {name}\n📱 {phone}\n🎓 {education}\n📚 {course}\n"
             "💼 Categories: {categories}\n🏢 Types: {job_types}\n\n{status}"
         ),
         "edit_profile_btn": "✏️ Edit profile",
@@ -302,7 +291,6 @@ TEXTS: dict[str, dict[str, str]] = {
         "finish_onboarding": "👉 Please complete your profile first. Tap /start.",
         "any_location": "Anywhere",
         "not_given": "-",
-        "other_district_value": "__other__",
     },
 }
 

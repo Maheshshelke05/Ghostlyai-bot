@@ -120,7 +120,6 @@ export default function UserDetailScreen() {
           <View className="mt-3 gap-1">
             <InfoLine label="Phone" value={user.phone ?? "-"} />
             <InfoLine label="Telegram" value={user.username ? `@${user.username}` : "-"} />
-            <InfoLine label="District" value={user.district ?? "Kuthehi"} />
             <InfoLine label="Language" value={user.language} />
             <InfoLine label="Joined" value={new Date(user.created_at).toLocaleDateString("en-IN")} />
             <InfoLine label="Access until" value={user.access_until ? new Date(user.access_until).toLocaleDateString("en-IN") : "-"} />

@@ -51,7 +51,7 @@ export function JobCard({ job, onDelete }: { job: JobOut; onDelete: (job: JobOut
         <View className="flex-row items-center flex-wrap gap-2 mt-2">
           {job.category_slug ? <Badge label={job.category_slug} tone="brand" /> : null}
           <Text className="text-xs text-muted">
-            {JOB_TYPE_ICON[job.job_type] ?? ""} {job.district ?? "Kuthehi"}
+            {JOB_TYPE_ICON[job.job_type] ?? ""} {job.location_text ?? "Anywhere"}
           </Text>
           {job.last_date ? <Text className="text-xs text-muted">⏳ {job.last_date}</Text> : null}
         </View>

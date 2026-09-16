@@ -13,14 +13,13 @@ import { Button } from "@/components/ui/Button";
 import { Chip } from "@/components/ui/Chip";
 import { SelectSheet } from "@/components/ui/SelectSheet";
 import { useToast } from "@/components/ui/Toast";
-import { apiErrorMessage, getDistricts, listCategories, type JobIn } from "@/lib/api";
+import { apiErrorMessage, listCategories, type JobIn } from "@/lib/api";
 
 const schema = z.object({
   title: z.string().min(2).max(200),
   company: z.string().min(1).max(160),
   category_slug: z.string().min(1, "Category is required"),
   qualification: z.string().max(200).optional().or(z.literal("")),
-  district: z.string().optional().or(z.literal("")),
   location_text: z.string().max(160).optional().or(z.literal("")),
   job_type: z.enum(["govt", "private", "internship", "wfh"]),
   salary: z.string().max(80).optional().or(z.literal("")),
@@ -56,10 +55,8 @@ export function JobForm({
   const [submitting, setSubmitting] = useState<"save" | "save-new" | null>(null);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const categorySheetRef = useRef<BottomSheetModal>(null);
-  const districtSheetRef = useRef<BottomSheetModal>(null);
 
   const { data: categories } = useQuery({ queryKey: ["categories"], queryFn: listCategories });
-  const { data: districts } = useQuery({ queryKey: ["districts"], queryFn: getDistricts });
 
   const {
     control,
@@ -77,18 +74,15 @@ export function JobForm({
   });
 
   const categorySlug = watch("category_slug");
-  const district = watch("district");
   const lastDate = watch("last_date");
 
   const categoryOptions = (categories ?? []).map((c) => ({ label: c.name, value: c.slug }));
-  const districtOptions = [{ label: "Kuthehi (Anywhere)", value: "" }, ...(districts ?? []).map((d) => ({ label: d, value: d }))];
 
   const toJobIn = (data: JobFormData): JobIn => ({
     title: data.title.trim(),
     company: data.company.trim(),
     category_slug: data.category_slug,
     qualification: data.qualification || null,
-    district: data.district || null,
     location_text: data.location_text || null,
     job_type: data.job_type,
     salary: data.salary || null,
@@ -122,10 +116,6 @@ export function JobForm({
   };
 
   const selectedCategoryLabel = categoryOptions.find((c) => c.value === categorySlug)?.label;
-  const selectedDistrictLabel =
-    district === "" || district === undefined
-      ? "Kuthehi (Anywhere)"
-      : districtOptions.find((d) => d.value === district)?.label ?? district;
 
   return (
     <ScrollView className="flex-1" contentContainerStyle={{ padding: 16, paddingBottom: 40 }} keyboardShouldPersistTaps="handled">
@@ -164,17 +154,12 @@ export function JobForm({
         ))}
       </View>
 
-      <FieldLabel text="District" />
-      <Pressable onPress={() => districtSheetRef.current?.present()} className={inputClass}>
-        <Text className="text-ink">{selectedDistrictLabel}</Text>
-      </Pressable>
-
-      <FieldLabel text="Location (area / landmark)" />
+      <FieldLabel text="Location (city / area)" />
       <Controller
         control={control}
         name="location_text"
         render={({ field: { onChange, value, onBlur } }) => (
-          <TextInput value={value} onChangeText={onChange} onBlur={onBlur} placeholder="Sitabuldi, Nagpur" className={inputClass} />
+          <TextInput value={value} onChangeText={onChange} onBlur={onBlur} placeholder="e.g. Andheri, Mumbai" className={inputClass} />
         )}
       />
 
@@ -271,16 +256,6 @@ export function JobForm({
           setValue("category_slug", value);
           Haptics.selectionAsync().catch(() => {});
           categorySheetRef.current?.dismiss();
-        }}
-      />
-      <SelectSheet
-        ref={districtSheetRef}
-        title="Select district"
-        options={districtOptions}
-        onSelect={(value) => {
-          setValue("district", value);
-          Haptics.selectionAsync().catch(() => {});
-          districtSheetRef.current?.dismiss();
         }}
       />
     </ScrollView>

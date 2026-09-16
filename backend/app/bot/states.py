@@ -8,8 +8,6 @@ class Onboarding(StatesGroup):
     language = State()
     name = State()
     phone = State()
-    district = State()
-    district_text = State()
     resume = State()
     confirm_resume = State()
     education = State()
