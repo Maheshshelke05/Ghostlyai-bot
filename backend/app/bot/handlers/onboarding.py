@@ -281,9 +281,12 @@ async def on_resume_file(
         await checking_msg.edit_text(t(lang, "resume_not_resume"))
         return
 
-    path = await storage.save_resume(user.id, data, mime, filename)
-
     profile = user.profile
+    path = await storage.save_resume(
+        user.id, data, mime, filename,
+        previous_resume_path=profile.resume_path if profile else None,
+    )
+
     if profile is None:
         profile = Profile(user_id=user.id)
         db.add(profile)

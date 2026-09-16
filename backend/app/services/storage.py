@@ -6,9 +6,15 @@ hosts with an ephemeral filesystem (Render, Heroku-style). Falls back to local d
 UPLOAD_DIR when Cloudinary isn't configured, which is fine for a VPS with a persistent volume
 or for local development.
 
+Cloudinary quirk this module works around: for resource_type="raw", the file's extension is
+part of its public_id's identity (Cloudinary appends `format` onto `public_id` at upload time
+but does NOT reliably do the same lookup when generating a private_download_url from a bare
+public_id + separate format - that mismatch 404s). So the extension is always embedded directly
+in the public_id we choose, and reused as-is for delete/download - no guessing involved.
+
 resume_path values are tagged so both backends can coexist / be told apart:
-  - "cloudinary:<public_id>|<format>"  -> stored in Cloudinary
-  - anything else                      -> a local filesystem path
+  - "cloudinary:<public_id incl. extension>"  -> stored in Cloudinary
+  - anything else                             -> a local filesystem path
 """
 from __future__ import annotations
 
@@ -76,60 +82,70 @@ def _delete_local_sync(user_id: int) -> None:
         pass
 
 
-def _cloudinary_public_id(user_id: int) -> str:
-    return f"resumes/{user_id}/resume"
+def _cloudinary_public_id(user_id: int, ext: str) -> str:
+    return f"resumes/{user_id}/resume.{ext}"
 
 
 def _upload_cloudinary_sync(user_id: int, data: bytes, ext: str) -> str:
     import cloudinary.uploader
 
-    public_id = _cloudinary_public_id(user_id)
+    public_id = _cloudinary_public_id(user_id, ext)
     cloudinary.uploader.upload(
         io.BytesIO(data),
         public_id=public_id,
         resource_type="raw",
         type="authenticated",
-        format=ext,
         overwrite=True,
         invalidate=True,
     )
-    return f"{_CLOUDINARY_PREFIX}{public_id}|{ext}"
+    return f"{_CLOUDINARY_PREFIX}{public_id}"
 
 
-def _delete_cloudinary_sync(user_id: int) -> None:
+def _delete_cloudinary_sync(public_id: str) -> None:
     import cloudinary.uploader
 
     try:
-        cloudinary.uploader.destroy(
-            _cloudinary_public_id(user_id), resource_type="raw", type="authenticated", invalidate=True
-        )
+        cloudinary.uploader.destroy(public_id, resource_type="raw", type="authenticated", invalidate=True)
     except Exception:  # noqa: BLE001
         pass  # best-effort - nothing to clean up if it was never uploaded
 
 
-def _signed_cloudinary_url_sync(public_id: str, ext: str) -> str:
+def _signed_cloudinary_url_sync(public_id: str) -> str:
     import cloudinary.utils
 
     return cloudinary.utils.private_download_url(
-        public_id, ext,
+        public_id, "",  # format is already embedded in public_id for raw resources
         resource_type="raw",
         type="authenticated",
         expires_at=int(time.time()) + _SIGNED_URL_TTL_SECONDS,
     )
 
 
-def parse_resume_path(resume_path: str) -> tuple[str, str] | None:
-    """Returns (public_id, format) if this is a Cloudinary-stored resume, else None."""
+def parse_resume_path(resume_path: str) -> Optional[str]:
+    """Returns the Cloudinary public_id if this is a Cloudinary-stored resume, else None."""
     if not resume_path.startswith(_CLOUDINARY_PREFIX):
         return None
-    public_id, _, ext = resume_path[len(_CLOUDINARY_PREFIX):].partition("|")
-    return public_id, ext
+    return resume_path[len(_CLOUDINARY_PREFIX):]
 
 
-async def save_resume(user_id: int, data: bytes, mime: str, fallback_name: str = "") -> str:
-    """Saves a resume and returns the resume_path to store on the Profile row."""
+async def save_resume(
+    user_id: int, data: bytes, mime: str, fallback_name: str = "",
+    previous_resume_path: Optional[str] = None,
+) -> str:
+    """Saves a resume and returns the resume_path to store on the Profile row.
+
+    `previous_resume_path` (the profile's existing resume_path, if any) is used to clean up a
+    prior upload with a different extension - Cloudinary's overwrite only replaces a resource
+    with the exact same public_id, so a PDF-then-DOCX re-upload would otherwise leave the old
+    PDF behind as an orphaned resource.
+    """
     ext = extension_for(mime, fallback_name)
     if cloudinary_configured():
+        if previous_resume_path:
+            old_public_id = parse_resume_path(previous_resume_path)
+            new_public_id = _cloudinary_public_id(user_id, ext)
+            if old_public_id and old_public_id != new_public_id:
+                await asyncio.to_thread(_delete_cloudinary_sync, old_public_id)
         return await asyncio.to_thread(_upload_cloudinary_sync, user_id, data, ext)
     path = _local_resume_path(user_id, ext)
     await asyncio.to_thread(_write_local_sync, path, data)
@@ -139,16 +155,16 @@ async def save_resume(user_id: int, data: bytes, mime: str, fallback_name: str =
 async def get_resume_url(resume_path: str) -> Optional[str]:
     """A short-lived signed URL for a Cloudinary-stored resume, or None for a local file
     (the caller should serve local files directly instead)."""
-    parsed = parse_resume_path(resume_path)
-    if parsed is None:
+    public_id = parse_resume_path(resume_path)
+    if public_id is None:
         return None
-    public_id, ext = parsed
-    return await asyncio.to_thread(_signed_cloudinary_url_sync, public_id, ext)
+    return await asyncio.to_thread(_signed_cloudinary_url_sync, public_id)
 
 
 async def delete_resume(user_id: int, resume_path: Optional[str]) -> None:
     """Deletes a user's stored resume from whichever backend it lives in."""
-    if resume_path and parse_resume_path(resume_path) is not None:
-        await asyncio.to_thread(_delete_cloudinary_sync, user_id)
+    public_id = parse_resume_path(resume_path) if resume_path else None
+    if public_id:
+        await asyncio.to_thread(_delete_cloudinary_sync, public_id)
     else:
         await asyncio.to_thread(_delete_local_sync, user_id)
