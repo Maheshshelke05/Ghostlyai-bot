@@ -10,7 +10,6 @@ from datetime import date
 
 from aiogram import Bot
 from aiogram.exceptions import TelegramBadRequest, TelegramForbiddenError, TelegramRetryAfter
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.bot.keyboards import apply_kb
@@ -120,26 +119,30 @@ async def count_matching_jobs(db: AsyncSession, user: User, limit: int = 100) ->
 
 
 async def send_digest_to_user(db: AsyncSession, bot: Bot, user: User, limit: int) -> int:
-    """Sends up to `limit` new matching jobs to a user. Returns count of jobs actually sent."""
+    """Sends up to `limit` new matching jobs to a user. Returns count of jobs actually sent.
+
+    Delivery rows are only inserted (and kept) for chunks that were actually delivered -
+    a chunk that fails to send (blocked or error) has its rows removed again, and no rows
+    are created at all for chunks after a block, so a failed/interrupted digest never
+    silently marks jobs as "already sent" to a user who never received them.
+    """
     jobs = await matching_jobs(db, user, limit)
     if not jobs:
         return 0
 
     lang = user.language or "mr"
-    deliveries: list[JobDelivery] = []
-    for job in jobs:
-        delivery = JobDelivery(job_id=job.id, user_id=user.id)
-        db.add(delivery)
-        deliveries.append(delivery)
-    await db.flush()
-
     header = t(lang, "digest_header", count=len(jobs))
     sent_any = False
     blocked = False
+    sent_count = 0
 
     for chunk_start in range(0, len(jobs), _JOBS_PER_MESSAGE):
         chunk_jobs = jobs[chunk_start:chunk_start + _JOBS_PER_MESSAGE]
-        chunk_deliveries = deliveries[chunk_start:chunk_start + _JOBS_PER_MESSAGE]
+        chunk_deliveries = [JobDelivery(job_id=job.id, user_id=user.id) for job in chunk_jobs]
+        for delivery in chunk_deliveries:
+            db.add(delivery)
+        await db.flush()
+
         lines = [format_job_card(job, chunk_start + i + 1, lang) for i, job in enumerate(chunk_jobs)]
         text = "\n\n".join(lines)
         if chunk_start == 0:
@@ -154,20 +157,19 @@ async def send_digest_to_user(db: AsyncSession, bot: Bot, user: User, limit: int
         result = await safe_send(bot, user.telegram_id, text, markup)
         if result == "ok":
             sent_any = True
-        elif result == "blocked":
-            blocked = True
-            break
+            sent_count += len(chunk_jobs)
+        else:
+            for delivery in chunk_deliveries:
+                await db.delete(delivery)
+            await db.flush()
+            if result == "blocked":
+                blocked = True
+                break
         await asyncio.sleep(_MESSAGE_DELAY)
 
     if blocked:
         user.status = "bot_blocked"
-
-    if not sent_any:
-        for delivery in deliveries:
-            await db.delete(delivery)
-        await db.flush()
-        return 0
-
-    user.last_digest_at = utcnow()
+    if sent_any:
+        user.last_digest_at = utcnow()
     await db.flush()
-    return len(jobs)
+    return sent_count

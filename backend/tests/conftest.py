@@ -138,6 +138,9 @@ class FakeBot:
         self.forbidden_chat_ids: set[int] = set()
         self.retry_after_once: dict[int, int] = {}
         self.bad_request_chat_ids: set[int] = set()
+        # chat_id -> number of successful sends allowed before switching to "forbidden"
+        self.block_after: dict[int, int] = {}
+        self._sent_count: dict[int, int] = {}
 
     async def send_message(self, chat_id, text, reply_markup=None, disable_web_page_preview=None):
         if chat_id in self.retry_after_once:
@@ -147,7 +150,9 @@ class FakeBot:
             raise TelegramRetryAfter(
                 method=SendMessage(chat_id=chat_id, text=text), message="Too Many Requests", retry_after=seconds
             )
-        if chat_id in self.forbidden_chat_ids:
+        if chat_id in self.forbidden_chat_ids or self._sent_count.get(chat_id, 0) >= self.block_after.get(
+            chat_id, float("inf")
+        ):
             from aiogram.exceptions import TelegramForbiddenError
 
             raise TelegramForbiddenError(
@@ -158,6 +163,7 @@ class FakeBot:
 
             raise TelegramBadRequest(method=SendMessage(chat_id=chat_id, text=text), message="Bad Request")
 
+        self._sent_count[chat_id] = self._sent_count.get(chat_id, 0) + 1
         self.sent.append({"chat_id": chat_id, "text": text, "reply_markup": reply_markup})
         return object()
 
