@@ -90,6 +90,14 @@ async def lifespan(app: FastAPI):
         except Exception:  # noqa: BLE001
             logger.exception("Failed to set Telegram webhook")
 
+        try:
+            from app.bot.commands import set_my_commands
+
+            await set_my_commands(get_bot())
+            logger.info("Telegram command menu set (en/mr/hi)")
+        except Exception:  # noqa: BLE001
+            logger.exception("Failed to set Telegram command menu")
+
     embedded_scheduler = None
     if settings.RUN_SCHEDULER_IN_API:
         from app.workers.scheduler import build_scheduler
