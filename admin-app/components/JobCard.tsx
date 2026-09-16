@@ -1,6 +1,6 @@
 import { router } from "expo-router";
 import { Swipeable } from "react-native-gesture-handler";
-import { Pressable, Text, View } from "react-native";
+import { Platform, Pressable, Text, View } from "react-native";
 
 import { Badge } from "@/components/ui/Badge";
 import type { JobOut } from "@/lib/api";
@@ -11,6 +11,12 @@ const JOB_TYPE_ICON: Record<string, string> = {
   internship: "🎓",
   wfh: "🏠",
 };
+
+const cardShadow = Platform.select({
+  ios: { shadowColor: "#1E2420", shadowOpacity: 0.05, shadowRadius: 8, shadowOffset: { width: 0, height: 3 } },
+  android: { elevation: 1 },
+  default: {},
+});
 
 export function JobCard({ job, onDelete }: { job: JobOut; onDelete: (job: JobOut) => void }) {
   return (
@@ -28,6 +34,7 @@ export function JobCard({ job, onDelete }: { job: JobOut; onDelete: (job: JobOut
       <Pressable
         onPress={() => router.push(`/jobs/${job.id}`)}
         className="bg-surface border border-line/60 rounded-[18px] p-4 mb-3 mx-4"
+        style={cardShadow}
       >
         <View className="flex-row items-start justify-between">
           <View className="flex-1 pr-2">
