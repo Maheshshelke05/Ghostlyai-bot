@@ -1,0 +1,44 @@
+{
+  "expo": {
+    "name": "Job Alert Admin",
+    "slug": "job-alert-admin",
+    "scheme": "jobalertadmin",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.jobalertbot.admin"
+    },
+    "android": {
+      "package": "com.jobalertbot.admin",
+      "adaptiveIcon": {
+        "backgroundColor": "#F8CB46",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-font",
+      "expo-splash-screen",
+      "expo-secure-store",
+      "expo-sharing",
+      "@react-native-community/datetimepicker"
+    ],
+    "extra": {
+      "router": {}
+    },
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
