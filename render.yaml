@@ -1,0 +1,100 @@
+# Render Blueprint. Deploy: render.com -> New -> Blueprint -> pick this repo.
+#
+# Uses external managed Postgres (Neon) and Redis (Upstash) rather than Render's own
+# database/key-value services, since that's what this project is already configured for -
+# no databases: or keyvalue service block needed here. Every sync:false var below is left
+# for you to fill in through the Render dashboard the first time the blueprint runs; nothing
+# secret is stored in this file.
+
+services:
+  - type: web
+    name: ghostlyai-api
+    runtime: docker
+    plan: starter
+    region: singapore
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    healthCheckPath: /health
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: TIMEZONE
+        value: Asia/Kolkata
+      - key: CORS_ORIGINS
+        value: "*"
+      - key: DATABASE_URL
+        sync: false # postgresql+asyncpg://... from Neon (or wherever); keep the +asyncpg scheme
+      - key: REDIS_URL
+        sync: false # rediss://... from Upstash (rediss:// = TLS, not redis-cli's shell command)
+      - key: BOT_TOKEN
+        sync: false # from @BotFather
+      - key: TELEGRAM_WEBHOOK_SECRET
+        sync: false # random 32+ chars, e.g. `openssl rand -hex 24`
+      - key: SUPPORT_USERNAME
+        sync: false # your Telegram @username, without the @
+      - key: ADMIN_ALERT_CHAT_ID
+        sync: false # your numeric Telegram id, from @userinfobot
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_MODEL
+        value: gemini-3.8-flash
+      - key: RAZORPAY_KEY_ID
+        sync: false
+      - key: RAZORPAY_KEY_SECRET
+        sync: false
+      - key: RAZORPAY_WEBHOOK_SECRET
+        sync: false
+      - key: JWT_SECRET
+        sync: false # random 64+ chars, e.g. `openssl rand -hex 32`
+      - key: JWT_EXPIRE_HOURS
+        value: "72"
+      - key: CLOUDINARY_URL
+        sync: false # cloudinary://<api_key>:<api_secret>@<cloud_name>, from cloudinary.com dashboard
+      - key: MAX_RESUME_MB
+        value: "10"
+
+  - type: worker
+    name: ghostlyai-worker
+    runtime: docker
+    plan: starter
+    region: singapore
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    dockerCommand: python -m app.workers.scheduler
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: TIMEZONE
+        value: Asia/Kolkata
+      # The worker has no public URL of its own (only the api service does), but it needs to
+      # know the api's public URL to build correct tracking links in digest messages - set
+      # this to the exact URL Render assigns ghostlyai-api once you know it (defaults to
+      # https://ghostlyai-api.onrender.com, but Render appends -NNNN if that name is taken).
+      - key: BASE_URL
+        value: https://ghostlyai-api.onrender.com
+      - key: DATABASE_URL
+        sync: false
+      - key: REDIS_URL
+        sync: false
+      - key: BOT_TOKEN
+        sync: false
+      - key: SUPPORT_USERNAME
+        sync: false
+      - key: ADMIN_ALERT_CHAT_ID
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_MODEL
+        value: gemini-3.8-flash
+      - key: RAZORPAY_KEY_ID
+        sync: false
+      - key: RAZORPAY_KEY_SECRET
+        sync: false
+      - key: RAZORPAY_WEBHOOK_SECRET
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: CLOUDINARY_URL
+        sync: false
+      - key: MAX_RESUME_MB
+        value: "10"

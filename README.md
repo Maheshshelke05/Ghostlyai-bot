@@ -10,10 +10,16 @@ category and district, plus an Android admin app for uploading jobs and managing
 ```
 backend/        FastAPI + aiogram bot + worker (Python 3.12)
 admin-app/       Admin Android app (Expo + TypeScript)
-deploy/          Docker Compose, nginx, backup script for the VPS
+deploy/          Docker Compose, nginx, backup script for the VPS (alternative to Render)
+render.yaml      Render Blueprint (web + worker services) - the primary deploy target
 docs/            Deployment and app-release runbooks
 .github/         CI (backend test suite)
 ```
+
+Resume storage uses Cloudinary when `CLOUDINARY_URL` is set (required on Render - its
+filesystem is ephemeral), falling back to local disk otherwise (fine for local dev or a VPS
+with a persistent volume). Database/cache are external managed services (e.g. Neon Postgres +
+Upstash Redis) rather than services this repo hosts itself, which is what `render.yaml` assumes.
 
 ## Backend — local development
 
@@ -69,20 +75,24 @@ Type-check anytime with `npx tsc --noEmit`.
 
 ## Deploying to production
 
-See `docs/DEPLOY.md` for the full VPS runbook (Docker Compose, SSL, webhooks, backups,
-monitoring) and `docs/APP_RELEASE.md` for building the admin APK with EAS.
+- **Render** (recommended, matches `render.yaml`): `docs/DEPLOY_RENDER.md`
+- **Your own VPS** (Docker Compose, SSL, backups, monitoring): `docs/DEPLOY.md`
+- **Admin APK**: `docs/APP_RELEASE.md`
 
 ## Where things are documented
 
 - **Business rules, pricing, roadmap**: `Student_Job_Alert_Bot_Master_Plan.pdf`
 - **Engineering conventions, data model, locked tech decisions**: `CLAUDE.md`
 - **API**: `http://localhost:8000/docs` (Swagger) once the backend is running
-- **Deployment runbook**: `docs/DEPLOY.md`
+- **Render deployment runbook**: `docs/DEPLOY_RENDER.md`
+- **VPS deployment runbook**: `docs/DEPLOY.md`
 - **Admin app release runbook**: `docs/APP_RELEASE.md`
 
 ## Status
 
 Backend (bot, admin API, workers, payments, AI resume parsing) and the admin app (all screens
-from the spec) are built and wired end to end. Before going live you still need to supply real
-secrets (Telegram bot token, Gemini API key, Razorpay keys, a domain + VPS) — see the checklists
-in `docs/DEPLOY.md` and Chapter 30 of the master plan PDF.
+from the spec) are built, tested (71 automated backend tests) and wired end to end. The schema
+is already migrated and seeded on the project's Neon database. Razorpay keys are intentionally
+left blank for now (everything else works without them) - add them when ready, no code changes
+needed. See `docs/DEPLOY_RENDER.md` for the remaining manual steps (Cloudinary account, filling
+in secrets on Render, creating your admin login).

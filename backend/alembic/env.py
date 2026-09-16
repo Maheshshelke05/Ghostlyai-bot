@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import create_async_engine
 
 from app.config import settings
 from app.db.models import Base
+from app.db.session import _prepare_asyncpg_url
 
 config = context.config
 if config.config_file_name is not None:
@@ -16,13 +17,13 @@ if config.config_file_name is not None:
 
 target_metadata = Base.metadata
 
-config.set_main_option("sqlalchemy.url", settings.DATABASE_URL)
+_database_url, _connect_args = _prepare_asyncpg_url(settings.DATABASE_URL)
+config.set_main_option("sqlalchemy.url", _database_url)
 
 
 def run_migrations_offline() -> None:
-    url = settings.DATABASE_URL
     context.configure(
-        url=url,
+        url=_database_url,
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
@@ -38,7 +39,7 @@ def do_run_migrations(connection) -> None:
 
 
 async def run_migrations_online() -> None:
-    connectable = create_async_engine(settings.DATABASE_URL, poolclass=pool.NullPool)
+    connectable = create_async_engine(_database_url, poolclass=pool.NullPool, connect_args=_connect_args)
     async with connectable.connect() as connection:
         await connection.run_sync(do_run_migrations)
     await connectable.dispose()

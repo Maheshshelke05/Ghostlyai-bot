@@ -1,6 +1,7 @@
 """Central application settings, loaded from environment variables (.env)."""
 from __future__ import annotations
 
+import os
 from functools import lru_cache
 from zoneinfo import ZoneInfo
 
@@ -12,7 +13,10 @@ class Settings(BaseSettings):
 
     # ---------- App ----------
     APP_ENV: str = "development"  # development | production
-    BASE_URL: str = "http://localhost:8000"
+    # Render web services get RENDER_EXTERNAL_URL injected automatically; used as a fallback
+    # so BASE_URL doesn't have to be hardcoded for the web service (the worker, which has no
+    # public URL of its own, still needs BASE_URL set explicitly - see render.yaml).
+    BASE_URL: str = os.environ.get("RENDER_EXTERNAL_URL") or "http://localhost:8000"
     TIMEZONE: str = "Asia/Kolkata"
     CORS_ORIGINS: str = "*"
 
@@ -43,6 +47,9 @@ class Settings(BaseSettings):
     UPLOAD_DIR: str = "./data/resumes"
     MAX_RESUME_MB: int = 10
 
+    # ---------- Cloudinary (resume storage; optional, falls back to local disk) ----------
+    CLOUDINARY_URL: str = ""
+
     @property
     def tz(self) -> ZoneInfo:
         return ZoneInfo(self.TIMEZONE)
@@ -64,3 +71,11 @@ def get_settings() -> Settings:
 
 
 settings = get_settings()
+
+if settings.CLOUDINARY_URL:
+    # The cloudinary SDK's own env-based config loader parses this URL correctly (cloud
+    # name/api key/secret) - but only if it's in the actual process environment, which
+    # pydantic-settings does NOT do for values that came from a .env file. Setting it here,
+    # as early as possible in the import chain, ensures it's present before `import
+    # cloudinary` ever runs anywhere else in the app.
+    os.environ.setdefault("CLOUDINARY_URL", settings.CLOUDINARY_URL)

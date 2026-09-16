@@ -2,10 +2,11 @@
 from __future__ import annotations
 
 from datetime import timedelta
+from pathlib import Path
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, RedirectResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -17,7 +18,7 @@ from app.db.models import JobDelivery, Payment, User, utcnow
 from app.db.session import get_db
 from app.services.access import access_until, extend_subscription, has_paid_access, in_trial
 from app.services.notifier import safe_send
-from app.services.storage import delete_resume_dir
+from app.services.storage import delete_resume, get_resume_url
 
 router = APIRouter(prefix="/admin/users", tags=["admin-users"])
 
@@ -195,9 +196,13 @@ async def download_resume(user_id: int, db: AsyncSession = Depends(get_db), _adm
     user = await db.get(User, user_id)
     if user is None or user.profile is None or not user.profile.resume_path:
         raise HTTPException(status_code=404, detail="Resume not found")
-    from pathlib import Path
 
-    path = Path(user.profile.resume_path)
+    resume_path = user.profile.resume_path
+    signed_url = await get_resume_url(resume_path)
+    if signed_url is not None:
+        return RedirectResponse(signed_url)
+
+    path = Path(resume_path)
     if not path.exists():
         raise HTTPException(status_code=404, detail="Resume file not found")
     filename = f"resume_{user_id}{path.suffix}"
@@ -213,7 +218,7 @@ async def delete_user(user_id: int, db: AsyncSession = Depends(get_db), _admin=D
     await db.execute(
         Payment.__table__.update().where(Payment.user_id == user_id).values(user_id=None)
     )
-    await delete_resume_dir(user_id)
+    await delete_resume(user_id, user.profile.resume_path if user.profile else None)
     await db.delete(user)
     await db.flush()
     return {"ok": True}

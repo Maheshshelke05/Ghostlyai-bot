@@ -16,6 +16,7 @@ pyjwt>=2.9,<3
 bcrypt>=4.2,<5
 python-multipart>=0.0.12
 email-validator>=2.2
+cloudinary>=1.41,<2
 
 # tests
 pytest>=8.3,<9

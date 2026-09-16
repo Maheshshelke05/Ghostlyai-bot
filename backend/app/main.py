@@ -45,9 +45,35 @@ async def _check_redis() -> bool:
         return False
 
 
+def _run_migrations() -> None:
+    """Runs Alembic migrations synchronously (in a worker thread) against DATABASE_URL.
+
+    Hosts like Render have no built-in "run this before starting the web process" step for
+    Docker-runtime services, so the API applies pending migrations itself on boot. Only runs
+    in production - local/dev workflows keep running `alembic upgrade head` by hand so an
+    in-progress local migration isn't silently auto-applied.
+    """
+    import os
+
+    from alembic import command
+    from alembic.config import Config
+
+    backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    cfg = Config(os.path.join(backend_dir, "alembic.ini"))
+    cfg.set_main_option("script_location", os.path.join(backend_dir, "alembic"))
+    command.upgrade(cfg, "head")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("Starting Student Job Alert Bot API (env=%s)", settings.APP_ENV)
+
+    if settings.is_production:
+        import asyncio
+
+        logger.info("Running database migrations...")
+        await asyncio.to_thread(_run_migrations)
+        logger.info("Migrations up to date")
 
     if settings.is_production and settings.BOT_TOKEN:
         try:
