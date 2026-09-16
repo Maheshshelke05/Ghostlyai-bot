@@ -35,10 +35,14 @@
       "@react-native-community/datetimepicker"
     ],
     "extra": {
-      "router": {}
+      "router": {},
+      "eas": {
+        "projectId": "5df7a5c8-c854-461b-a781-61c1abe0dcf5"
+      }
     },
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "owner": "mahesh0505"
   }
 }
