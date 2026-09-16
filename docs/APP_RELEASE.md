@@ -5,16 +5,10 @@ it internally — EAS Build produces an installable `.apk` you can send directly
 
 ## One-time setup
 
-```bash
-cd admin-app
-npm install -g eas-cli
-eas login
-eas build:configure   # links this project to your Expo account (creates a project id)
-```
-
-This step is interactive (needs your Expo login) so only you can do it — but it's genuinely
-one-time. It writes an `extra.eas.projectId` into `admin-app/app.json`; commit that change. Once
-it's done, every build after this (local or CI) just reuses that project id.
+Already done — the project is linked to Expo account `mahesh0505` as
+`@mahesh0505/job-alert-admin`, and `admin-app/app.json` has the resulting
+`extra.eas.projectId` committed. Nothing to do here unless the app ever needs to move to a
+different Expo account.
 
 ## Automated builds via GitHub Actions (recommended)
 
@@ -23,14 +17,11 @@ whenever you push a change under `admin-app/`, or on demand from GitHub's UI. Yo
 run `eas login` on your own machine for this path; the workflow authenticates with a token
 instead.
 
-**One-time setup:**
+**One-time setup (only remaining step):**
 1. Get a token: [expo.dev](https://expo.dev) → your account → **Settings → Access Tokens** →
    **Create token**. Copy it (shown once).
 2. Add it as a GitHub secret: your repo → **Settings → Secrets and variables → Actions** →
    **New repository secret** → name `EXPO_TOKEN`, paste the value → **Add secret**.
-3. Make sure you've already done the "One-time setup" above (`eas build:configure`) at least
-   once locally and pushed the resulting `app.json` change - the workflow builds an *existing*
-   linked project, it doesn't create one.
 
 **Running it:**
 - **On demand**: repo → **Actions** tab → **Build Admin APK** workflow → **Run workflow** →
