@@ -11,6 +11,8 @@ import { useEffect } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
+import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { OfflineBanner } from "@/components/OfflineBanner";
 import { ToastProvider } from "@/components/ui/Toast";
 import { queryClient } from "@/lib/query-client";
 import { useAuthStore } from "@/store/auth";
@@ -38,28 +40,31 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
-        <QueryClientProvider client={queryClient}>
-          <BottomSheetModalProvider>
-            <ToastProvider>
-              <Stack screenOptions={{ headerShown: false }}>
-                <Stack.Protected guard={!!token}>
-                  <Stack.Screen name="(tabs)" />
-                  <Stack.Screen name="jobs/new" options={{ presentation: "modal", headerShown: true, title: "Add job" }} />
-                  <Stack.Screen name="jobs/[id]" options={{ headerShown: true, title: "Job" }} />
-                  <Stack.Screen name="jobs/ai-review" options={{ headerShown: true, title: "Review AI drafts" }} />
-                  <Stack.Screen name="users/[id]" options={{ headerShown: true, title: "User" }} />
-                  <Stack.Screen name="categories/index" options={{ headerShown: true, title: "Categories" }} />
-                  <Stack.Screen name="broadcast" options={{ presentation: "modal", headerShown: true, title: "Broadcast" }} />
-                  <Stack.Screen name="settings" options={{ headerShown: true, title: "Settings" }} />
-                  <Stack.Screen name="staff" options={{ headerShown: true, title: "Staff accounts" }} />
-                </Stack.Protected>
-                <Stack.Protected guard={!token}>
-                  <Stack.Screen name="(auth)" />
-                </Stack.Protected>
-              </Stack>
-            </ToastProvider>
-          </BottomSheetModalProvider>
-        </QueryClientProvider>
+        <ErrorBoundary>
+          <QueryClientProvider client={queryClient}>
+            <BottomSheetModalProvider>
+              <ToastProvider>
+                <OfflineBanner />
+                <Stack screenOptions={{ headerShown: false }}>
+                  <Stack.Protected guard={!!token}>
+                    <Stack.Screen name="(tabs)" />
+                    <Stack.Screen name="jobs/new" options={{ presentation: "modal", headerShown: true, title: "Add job" }} />
+                    <Stack.Screen name="jobs/[id]" options={{ headerShown: true, title: "Job" }} />
+                    <Stack.Screen name="jobs/ai-review" options={{ headerShown: true, title: "Review AI drafts" }} />
+                    <Stack.Screen name="users/[id]" options={{ headerShown: true, title: "User" }} />
+                    <Stack.Screen name="categories/index" options={{ headerShown: true, title: "Categories" }} />
+                    <Stack.Screen name="broadcast" options={{ presentation: "modal", headerShown: true, title: "Broadcast" }} />
+                    <Stack.Screen name="settings" options={{ headerShown: true, title: "Settings" }} />
+                    <Stack.Screen name="staff" options={{ headerShown: true, title: "Staff accounts" }} />
+                  </Stack.Protected>
+                  <Stack.Protected guard={!token}>
+                    <Stack.Screen name="(auth)" />
+                  </Stack.Protected>
+                </Stack>
+              </ToastProvider>
+            </BottomSheetModalProvider>
+          </QueryClientProvider>
+        </ErrorBoundary>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );
