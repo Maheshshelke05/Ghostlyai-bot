@@ -32,7 +32,8 @@
       "expo-splash-screen",
       "expo-secure-store",
       "expo-sharing",
-      "@react-native-community/datetimepicker"
+      "@react-native-community/datetimepicker",
+      "./plugins/withReleaseSigning.js"
     ],
     "extra": {
       "router": {},
