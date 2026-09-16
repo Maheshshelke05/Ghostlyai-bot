@@ -216,6 +216,7 @@ async def on_resume_file(
         return
 
     checking_msg = await message.answer(t(lang, "resume_checking"))
+    await message.bot.send_chat_action(message.chat.id, "upload_document")
 
     try:
         buffer = await message.bot.download(file_id)
@@ -496,6 +497,7 @@ async def on_category_text(message: Message, state: FSMContext, db: AsyncSession
             break
 
     if match is None:
+        await message.bot.send_chat_action(message.chat.id, "typing")
         categories = {c.slug: c.name for c in all_categories}
         slug = await ai.map_category(text, categories)
         if slug:

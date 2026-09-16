@@ -7,10 +7,11 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { useFonts } from "expo-font";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
+import { AnimatedSplash } from "@/components/AnimatedSplash";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { OfflineBanner } from "@/components/OfflineBanner";
 import { ToastProvider } from "@/components/ui/Toast";
@@ -30,6 +31,7 @@ export default function RootLayout() {
   });
   const hydrated = useAuthStore((s) => s.hydrated);
   const token = useAuthStore((s) => s.token);
+  const [splashDone, setSplashDone] = useState(false);
 
   const ready = fontsLoaded && hydrated;
 
@@ -38,6 +40,14 @@ export default function RootLayout() {
   }, [ready]);
 
   if (!ready) return null;
+
+  if (!splashDone) {
+    return (
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <AnimatedSplash onFinish={() => setSplashDone(true)} />
+      </GestureHandlerRootView>
+    );
+  }
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>

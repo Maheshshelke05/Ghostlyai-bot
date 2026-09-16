@@ -156,6 +156,7 @@ async def _send_subscribe(message: Message, db: AsyncSession, user: User, lang: 
     price = int(await get_setting(db, "price_inr", 99))
     days = int(await get_setting(db, "subscription_days", 30))
     text = f"{status_line(user, lang)}\n\n{t(lang, 'subscribe_info', price=price, days=days)}"
+    await message.bot.send_chat_action(message.chat.id, "typing")
 
     try:
         payment = await get_or_create_payment_link(db, user)
