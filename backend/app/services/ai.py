@@ -6,7 +6,7 @@ import logging
 from functools import lru_cache
 from typing import Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 from app.config import settings
 
@@ -14,41 +14,48 @@ logger = logging.getLogger("app.ai")
 
 MAX_JOB_TEXT_CHARS = 20_000
 
+# NOTE: none of the fields below may have default values (including Field(default=...) /
+# default_factory). The google-genai SDK's response_schema converter hard-rejects any Pydantic
+# field with a default ("Default value is not supported in the response schema for the Gemini
+# API") - these models are only ever populated FROM a Gemini structured-output response (never
+# manually constructed elsewhere with partial data), so requiring every field is safe; Gemini's
+# controlled generation always emits the complete schema, using null for unknown values.
+
 
 class ResumeData(BaseModel):
-    is_resume: bool = True
-    full_name: Optional[str] = None
-    phone: Optional[str] = None
-    email: Optional[str] = None
-    highest_education: Optional[str] = None
-    course: Optional[str] = None
-    skills: list[str] = Field(default_factory=list)
-    experience_years: float = 0
-    city_or_district: Optional[str] = None
-    summary: Optional[str] = None
-    suggested_category_slugs: list[str] = Field(default_factory=list)
+    is_resume: bool
+    full_name: Optional[str]
+    phone: Optional[str]
+    email: Optional[str]
+    highest_education: Optional[str]
+    course: Optional[str]
+    skills: list[str]
+    experience_years: float
+    city_or_district: Optional[str]
+    summary: Optional[str]
+    suggested_category_slugs: list[str]
 
 
 class CategoryMatch(BaseModel):
-    slug: Optional[str] = None
+    slug: Optional[str]
 
 
 class JobDraft(BaseModel):
-    title: Optional[str] = None
-    company: Optional[str] = None
-    category_slug: str = "other"
-    qualification: Optional[str] = None
-    district: Optional[str] = None
-    location_text: Optional[str] = None
-    job_type: str = "private"
-    salary: Optional[str] = None
-    apply_link: Optional[str] = None
-    last_date: Optional[str] = None
-    description: Optional[str] = None
+    title: Optional[str]
+    company: Optional[str]
+    category_slug: str
+    qualification: Optional[str]
+    district: Optional[str]
+    location_text: Optional[str]
+    job_type: str
+    salary: Optional[str]
+    apply_link: Optional[str]
+    last_date: Optional[str]
+    description: Optional[str]
 
 
 class JobDraftList(BaseModel):
-    jobs: list[JobDraft] = Field(default_factory=list)
+    jobs: list[JobDraft]
 
 
 # ---------------------------------------------------------------------------

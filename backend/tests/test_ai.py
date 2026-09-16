@@ -39,8 +39,20 @@ async def test_parse_resume_returns_none_on_exception(monkeypatch):
     assert result is None
 
 
+def _full_resume_data(**overrides) -> "ai.ResumeData":
+    defaults = dict(
+        is_resume=True, full_name=None, phone=None, email=None, highest_education=None,
+        course=None, skills=[], experience_years=0, city_or_district=None, summary=None,
+        suggested_category_slugs=[],
+    )
+    defaults.update(overrides)
+    return ai.ResumeData(**defaults)
+
+
 async def test_parse_resume_uses_parsed_when_available(monkeypatch):
-    data = ai.ResumeData(is_resume=True, highest_education="B.Com", suggested_category_slugs=["accounts-finance", "other", "unknown-slug"])
+    data = _full_resume_data(
+        highest_education="B.Com", suggested_category_slugs=["accounts-finance", "other", "unknown-slug"]
+    )
     monkeypatch.setattr(ai, "_get_client", lambda: _FakeClient(_FakeModels(response=_FakeResponse(parsed=data))))
     monkeypatch.setattr(ai.settings, "GEMINI_API_KEY", "fake-key")
 
@@ -51,7 +63,11 @@ async def test_parse_resume_uses_parsed_when_available(monkeypatch):
 
 
 async def test_parse_resume_falls_back_to_json_text(monkeypatch):
-    payload = {"is_resume": True, "highest_education": "12th", "suggested_category_slugs": []}
+    payload = {
+        "is_resume": True, "full_name": None, "phone": None, "email": None,
+        "highest_education": "12th", "course": None, "skills": [], "experience_years": 0,
+        "city_or_district": None, "summary": None, "suggested_category_slugs": [],
+    }
     monkeypatch.setattr(
         ai, "_get_client",
         lambda: _FakeClient(_FakeModels(response=_FakeResponse(parsed=None, text=json.dumps(payload)))),
