@@ -47,6 +47,10 @@ def format_job_card(job: Job, n: int, lang: str) -> str:
         "internship": t(lang, "jt_internship"), "wfh": t(lang, "jt_wfh"),
     }.get(job.job_type, job.job_type)
 
+    qualification_part = (
+        t(lang, "qualification_part", qualification=html.escape(_truncate(job.qualification, "qualification")))
+        if job.qualification else ""
+    )
     salary_part = t(lang, "salary_part", salary=html.escape(_truncate(job.salary, "salary"))) if job.salary else ""
     last_date_part = t(lang, "last_date_part", date=_fmt_date(job.last_date)) if job.last_date else ""
 
@@ -57,7 +61,7 @@ def format_job_card(job: Job, n: int, lang: str) -> str:
         company=html.escape(_truncate(job.company, "company")),
         location=html.escape(_truncate(location, "location")),
         job_type=job_type_label,
-        qualification=html.escape(_truncate(job.qualification, "qualification")) if job.qualification else "",
+        qualification=qualification_part,
         salary=salary_part,
         last_date=last_date_part,
     ).rstrip()
