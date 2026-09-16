@@ -4,7 +4,7 @@ import { View } from "react-native";
 export function Skeleton({ className = "" }: { className?: string }) {
   return (
     <MotiView
-      className={`bg-line/70 dark:bg-line/20 rounded-lg ${className}`}
+      className={`bg-line/70 rounded-lg ${className}`}
       from={{ opacity: 0.4 }}
       animate={{ opacity: 1 }}
       transition={{ type: "timing", duration: 700, loop: true }}
@@ -14,7 +14,7 @@ export function Skeleton({ className = "" }: { className?: string }) {
 
 export function CardSkeleton() {
   return (
-    <View className="rounded-[18px] bg-surface border border-line/60 dark:border-line/20 p-4 mb-3">
+    <View className="rounded-[18px] bg-surface border border-line/60 p-4 mb-3">
       <Skeleton className="h-4 w-1/2 mb-3" />
       <Skeleton className="h-3 w-3/4 mb-2" />
       <Skeleton className="h-3 w-2/3" />

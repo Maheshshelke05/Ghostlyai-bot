@@ -9,7 +9,7 @@ const cardShadow = Platform.select({
 export function Card({ className = "", style, ...rest }: ViewProps & { className?: string }) {
   return (
     <View
-      className={`rounded-[18px] bg-surface p-4 border border-line/60 dark:border-line/20 ${className}`}
+      className={`rounded-[18px] bg-surface p-4 border border-line/60 ${className}`}
       style={[cardShadow, style]}
       {...rest}
     />

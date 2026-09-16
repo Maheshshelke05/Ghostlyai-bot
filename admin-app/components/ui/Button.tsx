@@ -15,7 +15,7 @@ const VARIANT_CLASSES: Record<Variant, string> = {
 const VARIANT_TEXT_CLASSES: Record<Variant, string> = {
   primary: "text-white",
   brand: "text-brand-ink",
-  ghost: "text-ink dark:text-white",
+  ghost: "text-ink",
   danger: "text-white",
 };
 

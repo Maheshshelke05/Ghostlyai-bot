@@ -30,7 +30,7 @@ export function StatCard({ label, value, icon, format, trend, delay = 0 }: StatC
       className="flex-1 min-w-[45%]"
     >
       <View
-        className="rounded-[18px] bg-surface border border-line/60 dark:border-line/20 p-4"
+        className="rounded-[18px] bg-surface border border-line/60 p-4"
         style={cardShadow}
       >
         <View className="flex-row items-center justify-between">
@@ -44,7 +44,7 @@ export function StatCard({ label, value, icon, format, trend, delay = 0 }: StatC
             </View>
           ) : null}
         </View>
-        <Text className="mt-2 text-2xl font-extrabold text-ink dark:text-white">{display}</Text>
+        <Text className="mt-2 text-2xl font-extrabold text-ink">{display}</Text>
         <Text className="text-xs text-muted mt-0.5">{label}</Text>
       </View>
     </MotiView>

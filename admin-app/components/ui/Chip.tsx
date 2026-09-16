@@ -16,7 +16,7 @@ export function Chip({
         selected ? "bg-brand border-brand" : "bg-surface border-line"
       }`}
     >
-      <Text className={`text-sm font-medium ${selected ? "text-brand-ink" : "text-ink dark:text-white"}`}>
+      <Text className={`text-sm font-medium ${selected ? "text-brand-ink" : "text-ink"}`}>
         {label}
       </Text>
     </Pressable>
