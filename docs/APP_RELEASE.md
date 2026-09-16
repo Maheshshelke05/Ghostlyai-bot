@@ -12,6 +12,36 @@ eas login
 eas build:configure   # links this project to your Expo account (creates a project id)
 ```
 
+This step is interactive (needs your Expo login) so only you can do it — but it's genuinely
+one-time. It writes an `extra.eas.projectId` into `admin-app/app.json`; commit that change. Once
+it's done, every build after this (local or CI) just reuses that project id.
+
+## Automated builds via GitHub Actions (recommended)
+
+`.github/workflows/build-admin-apk.yml` builds the APK on EAS's servers automatically - either
+whenever you push a change under `admin-app/`, or on demand from GitHub's UI. You never need to
+run `eas login` on your own machine for this path; the workflow authenticates with a token
+instead.
+
+**One-time setup:**
+1. Get a token: [expo.dev](https://expo.dev) → your account → **Settings → Access Tokens** →
+   **Create token**. Copy it (shown once).
+2. Add it as a GitHub secret: your repo → **Settings → Secrets and variables → Actions** →
+   **New repository secret** → name `EXPO_TOKEN`, paste the value → **Add secret**.
+3. Make sure you've already done the "One-time setup" above (`eas build:configure`) at least
+   once locally and pushed the resulting `app.json` change - the workflow builds an *existing*
+   linked project, it doesn't create one.
+
+**Running it:**
+- **On demand**: repo → **Actions** tab → **Build Admin APK** workflow → **Run workflow** →
+  pick a profile (`preview` for a normal test APK) → **Run workflow**.
+- **Automatically**: any push to `main` that touches `admin-app/**` triggers it.
+
+**Getting the APK afterward:** open the finished workflow run → **Summary** tab shows the direct
+EAS download URL, and there's also an `admin-app-preview` (or matching profile name) artifact
+you can download as a zip containing the `.apk` directly from the run page - no Expo login
+needed to grab it.
+
 ## Point the app at your backend
 
 `eas.json` build profiles set `EXPO_PUBLIC_API_URL` per environment:

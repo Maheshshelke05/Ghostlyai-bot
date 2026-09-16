@@ -1,0 +1,80 @@
+name: Build Admin APK
+
+on:
+  workflow_dispatch:
+    inputs:
+      profile:
+        description: "EAS build profile"
+        required: true
+        default: "preview"
+        type: choice
+        options: [preview, production, development]
+  push:
+    branches: [main]
+    paths:
+      - "admin-app/**"
+      - ".github/workflows/build-admin-apk.yml"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: admin-app
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: admin-app/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type-check
+        run: npx tsc --noEmit
+
+      - name: Setup EAS
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Build (${{ github.event.inputs.profile || 'preview' }})
+        id: build
+        run: |
+          eas build \
+            --platform android \
+            --profile "${{ github.event.inputs.profile || 'preview' }}" \
+            --non-interactive \
+            --wait \
+            --json > build-result.json
+          cat build-result.json
+
+      - name: Extract build URL
+        id: url
+        run: |
+          URL=$(jq -r '.[0].artifacts.buildUrl // .[0].artifactUrl // empty' build-result.json)
+          echo "build_url=$URL" >> "$GITHUB_OUTPUT"
+          if [ -n "$URL" ]; then
+            echo "### 📦 APK ready" >> "$GITHUB_STEP_SUMMARY"
+            echo "$URL" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "Could not auto-extract the download URL - check build-result.json above, or eas.dev under your project's builds." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Download APK
+        if: steps.url.outputs.build_url != ''
+        run: curl -fL -o admin-app.apk "${{ steps.url.outputs.build_url }}"
+
+      - name: Upload APK as workflow artifact
+        if: steps.url.outputs.build_url != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: admin-app-${{ github.event.inputs.profile || 'preview' }}
+          path: admin-app/admin-app.apk
+          retention-days: 30
