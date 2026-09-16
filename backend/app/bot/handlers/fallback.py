@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from aiogram import Router
 from aiogram.fsm.context import FSMContext
-from aiogram.types import Message
+from aiogram.types import CallbackQuery, Message
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.bot.handlers.account import _support_line, require_profile
@@ -24,3 +24,10 @@ async def on_fallback(message: Message, state: FSMContext, db: AsyncSession, use
         await message.answer(t(lang, "finish_onboarding"))
         return
     await message.answer(t(lang, "help", support=_support_line(lang)))
+
+
+@router.callback_query()
+async def on_stale_callback(callback: CallbackQuery) -> None:
+    """A button from an old message that no longer matches the user's current FSM state
+    (Chapter 6.3: "Old button dabla -> State match nahi -> callback.answer() aani kahi nahi")."""
+    await callback.answer()
