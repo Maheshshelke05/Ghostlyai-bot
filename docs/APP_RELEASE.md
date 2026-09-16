@@ -15,7 +15,7 @@ eas build:configure   # links this project to your Expo account (creates a proje
 ## Point the app at your backend
 
 `eas.json` build profiles set `EXPO_PUBLIC_API_URL` per environment:
-- `preview` / `production` → `https://api.yourdomain.com` (edit this to your real domain first)
+- `preview` / `production` → `https://api.ghotlyai.in`
 - `development` → `http://localhost:8000` (for use with `expo start` against a local backend)
 
 ## Build an APK for internal testing
