@@ -18,6 +18,12 @@ services:
     envVars:
       - key: APP_ENV
         value: production
+      # Custom domain (api.ghotlyai.in) - set explicitly rather than relying on Render's
+      # auto-injected RENDER_EXTERNAL_URL, which keeps showing the *.onrender.com address
+      # even after a custom domain is attached. See docs/DEPLOY_RENDER.md for the Cloudflare
+      # CNAME + Render "Custom Domain" steps this depends on.
+      - key: BASE_URL
+        value: https://api.ghotlyai.in
       - key: TIMEZONE
         value: Asia/Kolkata
       - key: CORS_ORIGINS
@@ -67,11 +73,9 @@ services:
       - key: TIMEZONE
         value: Asia/Kolkata
       # The worker has no public URL of its own (only the api service does), but it needs to
-      # know the api's public URL to build correct tracking links in digest messages - set
-      # this to the exact URL Render assigns ghostlyai-api once you know it (defaults to
-      # https://ghostlyai-api.onrender.com, but Render appends -NNNN if that name is taken).
+      # know the api's public URL to build correct tracking links in digest messages.
       - key: BASE_URL
-        value: https://ghostlyai-api.onrender.com
+        value: https://api.ghotlyai.in
       - key: DATABASE_URL
         sync: false
       - key: REDIS_URL

@@ -1,0 +1,27 @@
+# Keeps the Docker build context (and thus image, via COPY . .) small and reproducible -
+# without this, a local `docker build` run from a working directory that has a .venv, test
+# artifacts, etc. would bake all of that into the image.
+.venv/
+venv/
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+htmlcov/
+.coverage
+*.sqlite3
+
+.git/
+.gitignore
+.dockerignore
+
+.env
+.env.*
+!.env.example
+
+data/
+tests/
+pytest.ini
+README.md

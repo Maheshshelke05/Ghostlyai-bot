@@ -54,21 +54,44 @@ but not for Render).
 
 3. Click **Apply**. Render builds both Docker images and starts the services.
 
-## 4. Watch the first deploy
+## 4. Point your domain at it (api.ghotlyai.in via Cloudflare)
 
-Open the `ghostlyai-api` service's **Logs** tab. On first boot it will:
+`render.yaml` already sets `BASE_URL=https://api.ghotlyai.in` on both services (not the default
+`*.onrender.com` address), so the webhook the API registers on boot only works once this step is
+done. Do this before you rely on the bot responding.
+
+**On Render:**
+1. `ghostlyai-api` service → **Settings** → **Custom Domains** → **Add Custom Domain**.
+2. Enter `api.ghotlyai.in`. Render shows you a target hostname to point DNS at — it looks like
+   `ghostlyai-api.onrender.com` (copy the exact value Render shows you; it can include a random
+   suffix if the plain name was taken).
+
+**On Cloudflare** (dash.cloudflare.com → `ghotlyai.in` → DNS → Records → Add record):
+1. Type: **CNAME**
+2. Name: `api`
+3. Target: the hostname Render just gave you
+4. Proxy status: **DNS only** (grey cloud, *not* orange) — this matters. Render provisions the
+   TLS certificate itself via a Let's Encrypt challenge against the real origin; Cloudflare's
+   proxy in front of that during provisioning commonly breaks it. You can switch it to proxied
+   (orange cloud) afterward once Render shows the domain as verified with an active certificate,
+   if you want Cloudflare's CDN/DDoS protection in front — but leave it grey until then.
+5. Save. DNS propagation is usually fast on Cloudflare (seconds to a couple of minutes).
+
+Back on Render, the custom domain's status moves from "Pending" to "Verified" once DNS resolves
+and the certificate issues (check the same Settings → Custom Domains panel). Once verified,
+`https://api.ghotlyai.in` is live and serving the same app as the `.onrender.com` URL.
+
+## 5. Watch the first deploy
+
+Open the `ghostlyai-api` service's **Logs** tab. On boot it will:
 1. Run `alembic upgrade head` automatically (the API does this itself on every production
    startup — see `app/main.py`; safe to run repeatedly, it's a no-op once up to date).
-2. Register the Telegram webhook at `https://ghostlyai-api.onrender.com/webhooks/telegram`
-   (or whatever URL Render actually assigned — check the service's page if `ghostlyai-api`
-   was taken and Render appended a suffix).
+2. Register the Telegram webhook at `https://api.ghotlyai.in/webhooks/telegram`. If this runs
+   *before* step 4 finishes (DNS/cert not verified yet), Telegram simply can't reach it yet —
+   redeploy (or just wait for the next restart) once the domain is verified, and it'll re-register
+   correctly; the API does this unconditionally on every boot, not just the first one.
 
-If the assigned URL differs from `https://ghostlyai-api.onrender.com`, update the `BASE_URL`
-value in the **`ghostlyai-worker`** service's environment variables to match (the worker has no
-public URL of its own, so it can't infer this automatically the way the api service does) — the
-api service handles this automatically via Render's injected `RENDER_EXTERNAL_URL`.
-
-## 5. Create your admin login
+## 6. Create your admin login
 
 Render's dashboard → `ghostlyai-api` service → **Shell** tab (gives you a terminal inside the
 running container):
@@ -80,15 +103,15 @@ python -m app.scripts.create_admin
 Answer the prompts (name, email, password, role = `owner`). This is interactive on purpose so
 your password is never typed into a script, a chat, or a file.
 
-## 6. Point the admin app at it
+## 7. Point the admin app at it
 
-In `admin-app/eas.json`, set the `preview`/`production` profile's `EXPO_PUBLIC_API_URL` to your
-Render URL, then build per `docs/APP_RELEASE.md`.
+In `admin-app/eas.json`, set the `preview`/`production` profile's `EXPO_PUBLIC_API_URL` to
+`https://api.ghotlyai.in`, then build per `docs/APP_RELEASE.md`.
 
-## 7. Verify
+## 8. Verify
 
 ```bash
-curl https://ghostlyai-api.onrender.com/health
+curl https://api.ghotlyai.in/health
 # {"db":"ok","redis":"ok"}
 ```
 

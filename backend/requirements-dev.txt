@@ -1,0 +1,8 @@
+# Test-only dependencies - installed for local dev / CI, never baked into the
+# production Docker image (keeps the deployed image smaller and its dependency
+# surface limited to what actually runs in production).
+-r requirements.txt
+
+pytest>=8.3,<9
+pytest-asyncio>=0.24,<0.25
+aiosqlite>=0.20,<0.21

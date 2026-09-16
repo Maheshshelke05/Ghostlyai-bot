@@ -27,9 +27,12 @@ Upstash Redis) rather than services this repo hosts itself, which is what `rende
 cd backend
 python -m venv .venv
 source .venv/Scripts/activate   # Windows Git Bash; use .venv/bin/activate on macOS/Linux
-pip install -r requirements.txt
+pip install -r requirements-dev.txt   # requirements.txt + pytest/aiosqlite for testing
 cp ../.env.example ../.env      # fill in BOT_TOKEN, GEMINI_API_KEY etc. as you get them
 ```
+
+`requirements.txt` alone (no test deps) is what actually ships in the production Docker image —
+see `backend/Dockerfile`.
 
 Run the test suite (no Postgres/Redis needed — tests use in-memory SQLite):
 
