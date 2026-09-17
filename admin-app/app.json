@@ -14,7 +14,7 @@
     "android": {
       "package": "com.jobalertbot.admin",
       "adaptiveIcon": {
-        "backgroundColor": "#F8CB46",
+        "backgroundColor": "#EA580C",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
@@ -31,8 +31,8 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/splash-icon.png",
-          "backgroundColor": "#F8CB46",
+          "image": "./assets/splash-blank.png",
+          "backgroundColor": "#F97316",
           "imageWidth": 200
         }
       ],
