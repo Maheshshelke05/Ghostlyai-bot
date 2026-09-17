@@ -89,31 +89,29 @@ jobs:
           path: admin-app/${{ steps.apk.outputs.apk_name }}
           retention-days: 90
 
-      # Uploading a ~100 MB asset occasionally fails on GitHub's side ("Error saving asset")
-      # even though the APK built fine; retry once after a pause before failing the run.
-      - name: Create or update GitHub Release
-        id: release
-        continue-on-error: true
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: admin-app-v${{ steps.apk.outputs.version }}-${{ github.run_number }}
-          name: Job Alert Admin v${{ steps.apk.outputs.version }} (build ${{ github.run_number }})
-          body: Automated build from commit ${{ github.sha }}.
-          files: admin-app/${{ steps.apk.outputs.apk_name }}
-          overwrite_files: true
-          make_latest: true
-
-      - name: Wait before retrying the release upload
-        if: steps.release.outcome == 'failure'
-        run: sleep 30
-
-      - name: Retry GitHub Release upload
-        if: steps.release.outcome == 'failure'
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: admin-app-v${{ steps.apk.outputs.version }}-${{ github.run_number }}
-          name: Job Alert Admin v${{ steps.apk.outputs.version }} (build ${{ github.run_number }})
-          body: Automated build from commit ${{ github.sha }}.
-          files: admin-app/${{ steps.apk.outputs.apk_name }}
-          overwrite_files: true
-          make_latest: true
+      # softprops/action-gh-release kept dying with "Error saving asset" on the ~50 MB APK,
+      # so the release is published with the preinstalled gh CLI and the upload is retried
+      # until it lands. The artifact above is always there as a fallback.
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: admin-app-v${{ steps.apk.outputs.version }}-${{ github.run_number }}
+          TITLE: Job Alert Admin v${{ steps.apk.outputs.version }} (build ${{ github.run_number }})
+          APK: ${{ steps.apk.outputs.apk_name }}
+        run: |
+          set -u
+          NOTES="Automated build from commit ${GITHUB_SHA}."
+          if ! gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --title "$TITLE" --notes "$NOTES" --latest
+          fi
+          for attempt in 1 2 3 4 5; do
+            if gh release upload "$TAG" "$APK" --repo "$GITHUB_REPOSITORY" --clobber; then
+              echo "Uploaded $APK on attempt $attempt"
+              gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json url,assets --jq '.url, (.assets[] | .name + " " + (.size|tostring) + " bytes")'
+              exit 0
+            fi
+            echo "Upload attempt $attempt failed; waiting before retrying..."
+            sleep $((attempt * 20))
+          done
+          echo "::error::Release asset upload failed after 5 attempts (the APK is still available as a workflow artifact)"
+          exit 1
