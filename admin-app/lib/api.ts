@@ -208,6 +208,7 @@ export interface SettingsData {
   digest_max_jobs: number;
   max_categories: number;
   teaser_every_hours: number;
+  job_delay_minutes: number;
 }
 
 export interface StaffRow {
@@ -505,5 +506,71 @@ export async function createStaff(payload: { name: string; email: string; passwo
 
 export async function updateStaff(id: number, payload: { is_active?: boolean; password?: string }) {
   const { data } = await apiClient.put(`/admin/staff/${id}`, payload);
+  return data;
+}
+
+// ---------------------------------------------------------------------------
+// Support inbox
+// ---------------------------------------------------------------------------
+export interface SupportThread {
+  user_id: number;
+  full_name: string | null;
+  username: string | null;
+  phone: string | null;
+  status: string;
+  last_message: string | null;
+  last_direction: "in" | "out" | null;
+  last_at: string | null;
+  awaiting_reply: boolean;
+}
+
+export interface SupportMessageOut {
+  id: number;
+  direction: "in" | "out";
+  text: string;
+  created_at: string;
+}
+
+export interface SupportThreadDetail {
+  user: { id: number; full_name: string | null; username: string | null; phone: string | null; status: string; language: string };
+  messages: SupportMessageOut[];
+}
+
+export async function listSupportThreads(params: { status?: "open" | "all"; q?: string; page?: number; size?: number }) {
+  const { data } = await apiClient.get<Page<SupportThread>>("/admin/support", { params });
+  return data;
+}
+
+export async function getSupportThread(userId: number) {
+  const { data } = await apiClient.get<SupportThreadDetail>(`/admin/support/${userId}`);
+  return data;
+}
+
+export async function replySupport(userId: number, text: string) {
+  const { data } = await apiClient.post<{ result: "ok" | "blocked" | "error" }>(`/admin/support/${userId}/reply`, { text });
+  return data;
+}
+
+// ---------------------------------------------------------------------------
+// Category delivery report
+// ---------------------------------------------------------------------------
+export interface CategoryDeliveryRow {
+  category_id: number;
+  slug: string;
+  name: string;
+  is_active: boolean;
+  jobs: number;
+  jobs_waiting_to_send: number;
+  subscribers: number;
+  sent: number;
+  clicked: number;
+  students_waiting: number;
+}
+
+export async function getDeliveryStats(days: number) {
+  const { data } = await apiClient.get<{ days: number; job_delay_minutes: number; items: CategoryDeliveryRow[] }>(
+    "/admin/categories/delivery-stats",
+    { params: { days } }
+  );
   return data;
 }

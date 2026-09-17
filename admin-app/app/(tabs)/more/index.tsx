@@ -1,13 +1,15 @@
 import { BottomSheetBackdrop, BottomSheetModal, BottomSheetTextInput, BottomSheetView } from "@gorhom/bottom-sheet";
+import { useQuery } from "@tanstack/react-query";
 import Constants from "expo-constants";
 import { router } from "expo-router";
 import { forwardRef, useCallback, useRef, useState } from "react";
-import { Pressable, Text, View } from "react-native";
+import { Pressable, ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Button } from "@/components/ui/Button";
+import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { useToast } from "@/components/ui/Toast";
-import { apiErrorMessage, changePassword } from "@/lib/api";
+import { apiErrorMessage, changePassword, listSupportThreads } from "@/lib/api";
 import { useAuthStore, useIsOwner } from "@/store/auth";
 
 export default function MoreScreen() {
@@ -22,44 +24,83 @@ export default function MoreScreen() {
     []
   );
 
+  const { data: openSupport } = useQuery({
+    queryKey: ["support", "open", ""],
+    queryFn: () => listSupportThreads({ status: "open", page: 1, size: 1 }),
+    refetchInterval: 30_000,
+  });
+  const openCount = openSupport?.total ?? 0;
+
   return (
-    <View className="flex-1 bg-background" style={{ paddingTop: insets.top + 16 }}>
-      <View className="px-4 mb-4">
-        <Text className="text-2xl font-extrabold text-ink">More</Text>
-        <Text className="text-sm text-muted mt-1">
-          {admin?.name} • {admin?.email} • {admin?.role}
-        </Text>
-      </View>
+    <ScrollView className="flex-1 bg-background" contentContainerStyle={{ paddingTop: insets.top + 8, paddingBottom: 40 }}>
+      <ScreenHeader title="More" subtitle={`${admin?.name ?? ""} · ${admin?.role ?? ""}`} />
 
-      <View className="px-4 gap-3">
-        {isOwner ? (
-          <MenuRow label="🗂 Categories" onPress={() => router.push("/categories")} />
-        ) : (
-          <MenuRow label="🗂 Categories (view)" onPress={() => router.push("/categories")} />
-        )}
-        {isOwner ? <MenuRow label="⚙️ Settings" onPress={() => router.push("/settings")} /> : null}
-        {isOwner ? <MenuRow label="🧑‍💻 Staff accounts" onPress={() => router.push("/staff")} /> : null}
-        {isOwner ? <MenuRow label="📣 Broadcast" onPress={() => router.push("/broadcast")} /> : null}
-        <MenuRow label="🔑 Change password" onPress={() => sheetRef.current?.present()} />
-      </View>
+      <Section title="Students">
+        <MenuRow icon="💬" label="Support inbox" badge={openCount} onPress={() => router.push("/support")} />
+        {isOwner ? <MenuRow icon="📣" label="Broadcast" onPress={() => router.push("/broadcast")} /> : null}
+        <MenuRow icon="📊" label="Delivery report" onPress={() => router.push("/delivery")} last />
+      </Section>
 
-      <View className="px-4 mt-6">
-        <Button label="Logout" variant="danger" onPress={logout} />
-      </View>
+      <Section title="Setup">
+        <MenuRow icon="🗂" label={isOwner ? "Categories" : "Categories (view)"} onPress={() => router.push("/categories")} last={!isOwner} />
+        {isOwner ? <MenuRow icon="⚙️" label="Settings" onPress={() => router.push("/settings")} /> : null}
+        {isOwner ? <MenuRow icon="🧑‍💻" label="Staff accounts" onPress={() => router.push("/staff")} last /> : null}
+      </Section>
 
-      <Text className="text-center text-xs text-muted mt-6">
-        App version {Constants.expoConfig?.version ?? "1.0.0"}
+      <Section title="Account">
+        <MenuRow icon="🔑" label="Change password" onPress={() => sheetRef.current?.present()} />
+        <MenuRow icon="🚪" label="Log out" destructive onPress={logout} last />
+      </Section>
+
+      <Text className="text-center text-xs text-muted mt-2">
+        {admin?.email} · v{Constants.expoConfig?.version ?? "1.0.0"}
       </Text>
 
       <ChangePasswordSheet ref={sheetRef} renderBackdrop={renderBackdrop} />
+    </ScrollView>
+  );
+}
+
+// iOS inset-grouped list: a small caps header, then rows in one rounded white block
+// separated by hairlines that start after the icon column.
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <View className="px-4 mb-6">
+      <Text className="text-[13px] text-muted uppercase tracking-wide mb-2 ml-1">{title}</Text>
+      <View className="bg-surface rounded-2xl overflow-hidden">{children}</View>
     </View>
   );
 }
 
-function MenuRow({ label, onPress }: { label: string; onPress: () => void }) {
+function MenuRow({
+  icon,
+  label,
+  badge,
+  destructive,
+  last,
+  onPress,
+}: {
+  icon: string;
+  label: string;
+  badge?: number;
+  destructive?: boolean;
+  last?: boolean;
+  onPress: () => void;
+}) {
   return (
-    <Pressable onPress={onPress} className="bg-surface border border-line/60 rounded-2xl px-4 py-4">
-      <Text className="text-base font-medium text-ink">{label}</Text>
+    <Pressable onPress={onPress} className="flex-row items-center pl-4 active:bg-background">
+      <Text className="text-lg w-8">{icon}</Text>
+      <View className={`flex-1 flex-row items-center justify-between py-3.5 pr-4 ${last ? "" : "border-b border-line"}`}>
+        <Text className={`text-[17px] ${destructive ? "text-danger" : "text-ink"}`}>{label}</Text>
+        <View className="flex-row items-center">
+          {badge ? (
+            <View className="bg-brand rounded-full min-w-[22px] h-[22px] px-1.5 items-center justify-center mr-2">
+              <Text className="text-white text-xs font-bold">{badge > 99 ? "99+" : badge}</Text>
+            </View>
+          ) : null}
+          {!destructive ? <Text className="text-line text-lg">›</Text> : null}
+        </View>
+      </View>
     </Pressable>
   );
 }

@@ -1,8 +1,19 @@
 import { zodResolver } from "@hookform/resolvers/zod";
+import { LinearGradient } from "expo-linear-gradient";
 import { MotiView } from "moti";
 import { useState } from "react";
 import { Controller, useForm } from "react-hook-form";
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, View } from "react-native";
+import {
+  Image,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
 import { z } from "zod";
 
 import { Button } from "@/components/ui/Button";
@@ -53,10 +64,14 @@ export default function LoginScreen() {
 
   return (
     <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} className="flex-1 bg-brand">
+      <LinearGradient colors={["#FB923C", "#EA580C"]} style={StyleSheet.absoluteFill} />
       <ScrollView contentContainerStyle={{ flexGrow: 1 }} keyboardShouldPersistTaps="handled">
-        <View className="h-[38%] items-center justify-end pb-8">
-          <Text className="text-4xl font-extrabold text-brand-ink">Job Alert Admin</Text>
-          <Text className="text-brand-ink/70 mt-1">Manage jobs, students & payments</Text>
+        <View className="h-[40%] items-center justify-end pb-8">
+          <Image source={require("../../assets/splash-icon.png")} style={{ width: 120, height: 120, marginBottom: 8 }} resizeMode="contain" />
+          <Text className="text-[30px] font-bold text-white tracking-tight">
+            Ghostly<Text className="text-ink"> AI</Text>
+          </Text>
+          <Text className="text-white/80 mt-0.5 text-[15px]">Job Alert Admin</Text>
         </View>
 
         <View className="flex-1 bg-background rounded-t-[28px] px-6 pt-8">

@@ -17,7 +17,7 @@ export function UserRow({ user }: { user: UserRowType }) {
   return (
     <Pressable
       onPress={() => router.push(`/users/${user.id}`)}
-      className="flex-row items-center bg-surface border border-line/60 rounded-[18px] p-3.5 mb-3 mx-4"
+      className="flex-row items-center bg-surface rounded-2xl p-3.5 mb-2 mx-4 active:opacity-70"
     >
       <View className="w-11 h-11 rounded-full bg-brand items-center justify-center mr-3">
         <Text className="text-brand-ink font-bold">{initials(user.full_name)}</Text>

@@ -55,14 +55,15 @@ export default function NewJobScreen() {
           </Text>
         </View>
       ) : null}
-      <View className="flex-row bg-surface mx-4 mt-3 rounded-2xl p-1 border border-line/60">
+      <View className="flex-row bg-line/70 mx-4 mt-3 rounded-xl p-[3px]">
         {TABS.map((t) => (
           <Pressable
             key={t.key}
             onPress={() => setTab(t.key)}
-            className={`flex-1 items-center py-2.5 rounded-xl ${tab === t.key ? "bg-brand" : ""}`}
+            className={`flex-1 items-center py-2 rounded-[9px] ${tab === t.key ? "bg-surface" : ""}`}
+            style={tab === t.key ? { shadowColor: "#000", shadowOpacity: 0.08, shadowRadius: 4, shadowOffset: { width: 0, height: 2 }, elevation: 2 } : undefined}
           >
-            <Text className={`text-sm font-semibold ${tab === t.key ? "text-brand-ink" : "text-muted"}`}>
+            <Text className={`text-[13px] font-semibold ${tab === t.key ? "text-ink" : "text-muted"}`}>
               {t.label}
             </Text>
           </Pressable>

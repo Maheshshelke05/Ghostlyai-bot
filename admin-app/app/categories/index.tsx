@@ -50,7 +50,7 @@ export default function CategoriesScreen() {
               setEditing(item);
               sheetRef.current?.present();
             }}
-            className="bg-surface border border-line/60 rounded-2xl p-4 mb-3 flex-row items-center justify-between"
+            className="bg-surface rounded-2xl p-4 mb-2 flex-row items-center justify-between active:opacity-70"
           >
             <View className="flex-1 pr-2">
               <Text className="text-base font-semibold text-ink">{item.name}</Text>

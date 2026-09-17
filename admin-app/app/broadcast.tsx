@@ -117,7 +117,7 @@ export default function BroadcastScreen() {
         />
 
         {progress ? (
-          <View className="mt-6 bg-surface border border-line/60 rounded-2xl p-4">
+          <View className="mt-6 bg-surface rounded-2xl p-4">
             <Text className="text-sm font-bold text-ink mb-2">
               Status: {progress.status} ({progress.sent}/{progress.total} sent, {progress.failed} failed)
             </Text>

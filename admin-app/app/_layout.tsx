@@ -57,7 +57,18 @@ export default function RootLayout() {
             <BottomSheetModalProvider>
               <ToastProvider>
                 <OfflineBanner />
-                <Stack screenOptions={{ headerShown: false }}>
+                <Stack
+                  screenOptions={{
+                    headerShown: false,
+                    // iOS navigation-bar look: white, no shadow line, bold 17pt title, tinted back button
+                    headerStyle: { backgroundColor: "#FFFFFF" },
+                    headerShadowVisible: false,
+                    headerTintColor: "#EA580C",
+                    headerTitleStyle: { fontWeight: "600", fontSize: 17, color: "#1C1C1E" },
+                    headerBackButtonDisplayMode: "minimal",
+                    contentStyle: { backgroundColor: "#F2F2F7" },
+                  }}
+                >
                   <Stack.Protected guard={!!token}>
                     <Stack.Screen name="(tabs)" />
                     <Stack.Screen name="jobs/new" options={{ presentation: "modal", headerShown: true, title: "Add job" }} />
@@ -68,6 +79,9 @@ export default function RootLayout() {
                     <Stack.Screen name="broadcast" options={{ presentation: "modal", headerShown: true, title: "Broadcast" }} />
                     <Stack.Screen name="settings" options={{ headerShown: true, title: "Settings" }} />
                     <Stack.Screen name="staff" options={{ headerShown: true, title: "Staff accounts" }} />
+                    <Stack.Screen name="support/index" options={{ headerShown: true, title: "Support inbox" }} />
+                    <Stack.Screen name="support/[userId]" options={{ headerShown: true, title: "Conversation" }} />
+                    <Stack.Screen name="delivery" options={{ headerShown: true, title: "Delivery report" }} />
                   </Stack.Protected>
                   <Stack.Protected guard={!token}>
                     <Stack.Screen name="(auth)" />

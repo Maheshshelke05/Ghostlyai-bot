@@ -8,7 +8,14 @@ import { ListSkeleton } from "@/components/ui/Skeleton";
 import { useToast } from "@/components/ui/Toast";
 import { apiErrorMessage, getSettings, updateSettings, type SettingsData } from "@/lib/api";
 
-type NumericKey = "price_inr" | "subscription_days" | "trial_days" | "digest_max_jobs" | "max_categories" | "teaser_every_hours";
+type NumericKey =
+  | "price_inr"
+  | "subscription_days"
+  | "trial_days"
+  | "digest_max_jobs"
+  | "max_categories"
+  | "teaser_every_hours"
+  | "job_delay_minutes";
 
 const NUMBER_FIELDS: { key: NumericKey; label: string }[] = [
   { key: "price_inr", label: "Price (₹)" },
@@ -17,6 +24,7 @@ const NUMBER_FIELDS: { key: NumericKey; label: string }[] = [
   { key: "digest_max_jobs", label: "Jobs per digest" },
   { key: "max_categories", label: "Max categories per student" },
   { key: "teaser_every_hours", label: "Teaser every (hours)" },
+  { key: "job_delay_minutes", label: "Hold new jobs before sending (minutes)" },
 ];
 
 export default function SettingsScreen() {
@@ -60,6 +68,7 @@ export default function SettingsScreen() {
     if (f.digest_max_jobs <= 0 || f.digest_max_jobs > 50) return "Jobs per digest must be between 1 and 50";
     if (f.max_categories <= 0 || f.max_categories > 10) return "Max categories must be between 1 and 10";
     if (f.teaser_every_hours <= 0) return "Teaser hours must be greater than 0";
+    if (f.job_delay_minutes < 0 || f.job_delay_minutes > 1440) return "Hold time must be between 0 and 1440 minutes";
     if (f.digest_times.length === 0) return "Add at least one digest time";
     return null;
   };

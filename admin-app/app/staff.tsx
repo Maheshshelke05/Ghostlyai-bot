@@ -41,7 +41,7 @@ export default function StaffScreen() {
         keyExtractor={(s) => String(s.id)}
         contentContainerStyle={{ padding: 16, paddingBottom: 100 }}
         renderItem={({ item }) => (
-          <View className="bg-surface border border-line/60 rounded-2xl p-4 mb-3 flex-row items-center justify-between">
+          <View className="bg-surface rounded-2xl p-4 mb-2 flex-row items-center justify-between">
             <View className="flex-1 pr-2">
               <Text className="text-base font-semibold text-ink">{item.name}</Text>
               <Text className="text-xs text-muted mt-0.5">

@@ -103,7 +103,7 @@ export function ExcelUploadTab() {
 
 function ResultStat({ label, value, tone }: { label: string; value: number; tone: string }) {
   return (
-    <View className="flex-1 items-center bg-surface border border-line/60 rounded-2xl py-3">
+    <View className="flex-1 items-center bg-surface rounded-2xl py-3">
       <Text className={`text-xl font-extrabold ${tone}`}>{value}</Text>
       <Text className="text-xs text-muted mt-0.5">{label}</Text>
     </View>

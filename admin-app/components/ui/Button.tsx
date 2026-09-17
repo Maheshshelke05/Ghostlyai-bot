@@ -3,20 +3,29 @@ import { MotiView } from "moti";
 import { useState } from "react";
 import { ActivityIndicator, Pressable, Text, type GestureResponderEvent } from "react-native";
 
+// iOS button styles: "primary" is the filled tint button, "brand" the tinted (translucent)
+// one, "ghost" the plain bordered one, "danger" the tinted destructive one.
 type Variant = "primary" | "brand" | "ghost" | "danger";
 
 const VARIANT_CLASSES: Record<Variant, string> = {
-  primary: "bg-go",
-  brand: "bg-brand",
-  ghost: "bg-transparent border border-line",
-  danger: "bg-danger",
+  primary: "bg-brand",
+  brand: "bg-brand-soft",
+  ghost: "bg-surface border border-line",
+  danger: "bg-danger/10",
 };
 
 const VARIANT_TEXT_CLASSES: Record<Variant, string> = {
   primary: "text-white",
-  brand: "text-brand-ink",
-  ghost: "text-ink",
-  danger: "text-white",
+  brand: "text-brand",
+  ghost: "text-brand",
+  danger: "text-danger",
+};
+
+const SPINNER_COLOR: Record<Variant, string> = {
+  primary: "#FFFFFF",
+  brand: "#EA580C",
+  ghost: "#EA580C",
+  danger: "#FF3B30",
 };
 
 interface ButtonProps {
@@ -42,7 +51,10 @@ export function Button({
   const isDisabled = disabled || loading;
 
   return (
-    <MotiView animate={{ scale: pressed ? 0.97 : 1 }} transition={{ type: "timing", duration: 120 }}>
+    <MotiView
+      animate={{ scale: pressed ? 0.96 : 1, opacity: pressed ? 0.85 : 1 }}
+      transition={{ type: "spring", damping: 18, stiffness: 320 }}
+    >
       <Pressable
         accessibilityRole="button"
         accessibilityState={{ disabled: isDisabled }}
@@ -54,17 +66,17 @@ export function Button({
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
           onPress?.(e);
         }}
-        className={`flex-row items-center justify-center rounded-2xl px-5 py-3.5 ${
+        className={`flex-row items-center justify-center rounded-[14px] px-5 ${
           fullWidth ? "w-full" : ""
-        } ${VARIANT_CLASSES[variant]} ${isDisabled ? "opacity-50" : ""}`}
-        style={{ minHeight: 48 }}
+        } ${VARIANT_CLASSES[variant]} ${isDisabled ? "opacity-40" : ""}`}
+        style={{ minHeight: 50 }}
       >
         {loading ? (
-          <ActivityIndicator color={variant === "brand" ? "#2A2000" : "#FFFFFF"} />
+          <ActivityIndicator color={SPINNER_COLOR[variant]} />
         ) : (
           <>
             {icon}
-            <Text className={`text-base font-semibold ${VARIANT_TEXT_CLASSES[variant]} ${icon ? "ml-2" : ""}`}>
+            <Text className={`text-[17px] font-semibold ${VARIANT_TEXT_CLASSES[variant]} ${icon ? "ml-2" : ""}`}>
               {label}
             </Text>
           </>

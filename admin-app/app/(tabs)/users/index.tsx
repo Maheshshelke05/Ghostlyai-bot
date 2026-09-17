@@ -2,27 +2,39 @@ import { FlashList } from "@shopify/flash-list";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
-import { Text, View } from "react-native";
+import { View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { UserRow } from "@/components/UserRow";
 import { Chip } from "@/components/ui/Chip";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { SearchBar } from "@/components/ui/SearchBar";
 import { ListSkeleton } from "@/components/ui/Skeleton";
 import { listUsers, type UsersQuery } from "@/lib/api";
 
 type FilterKey = "all" | "paid" | "trial" | "none" | "onboarding" | "blocked" | "expiring";
 
+const FILTERS: [FilterKey, string][] = [
+  ["all", "All"],
+  ["paid", "Paid"],
+  ["trial", "Trial"],
+  ["none", "Expired"],
+  ["onboarding", "Onboarding"],
+  ["blocked", "Blocked"],
+  ["expiring", "Expiring 3d"],
+];
+
 export default function UsersListScreen() {
-  const params = useLocalSearchParams<{ expiring?: string }>();
+  const params = useLocalSearchParams<{ expiring?: string; filter?: string }>();
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<FilterKey>(params.expiring ? "expiring" : "all");
   const insets = useSafeAreaInsets();
 
   useEffect(() => {
     if (params.expiring) setFilter("expiring");
-  }, [params.expiring]);
+    else if (params.filter && FILTERS.some(([key]) => key === params.filter)) setFilter(params.filter as FilterKey);
+  }, [params.expiring, params.filter]);
 
   const queryParams: UsersQuery = {
     q: query || undefined,
@@ -46,22 +58,15 @@ export default function UsersListScreen() {
   const users = data?.pages.flatMap((p) => p.items) ?? [];
 
   return (
-    <View className="flex-1 bg-background" style={{ paddingTop: insets.top + 8 }}>
+    <View className="flex-1 bg-background" style={{ paddingTop: insets.top }}>
+      <ScreenHeader
+        title="Students"
+        subtitle={data ? `${(data.pages[0]?.total ?? 0).toLocaleString("en-IN")} ${filter === "all" && !query ? "total" : "matching"}` : undefined}
+      />
       <View className="px-4">
-        <Text className="text-2xl font-extrabold text-ink mb-3">Users</Text>
         <SearchBar value={query} onChangeText={setQuery} placeholder="Name, phone or username" />
         <View className="flex-row flex-wrap">
-          {(
-            [
-              ["all", "All"],
-              ["paid", "Paid"],
-              ["trial", "Trial"],
-              ["none", "Expired"],
-              ["onboarding", "Onboarding"],
-              ["blocked", "Blocked"],
-              ["expiring", "Expiring 3d"],
-            ] as [FilterKey, string][]
-          ).map(([key, label]) => (
+          {FILTERS.map(([key, label]) => (
             <Chip key={key} label={label} selected={filter === key} onPress={() => setFilter(key)} />
           ))}
         </View>

@@ -4,17 +4,19 @@ module.exports = {
   presets: [require("nativewind/preset")],
   theme: {
     extend: {
+      // iOS system palette + the GhostlyAI orange as the tint colour
       colors: {
-        brand: "#F8CB46",
-        "brand-ink": "#2A2000",
-        go: "#0C831F",
-        ink: "#1E2420",
-        muted: "#59615B",
+        brand: "#EA580C",
+        "brand-ink": "#FFFFFF",
+        "brand-soft": "#FFF1E8",
+        go: "#34C759",
+        ink: "#1C1C1E",
+        muted: "#8E8E93",
         surface: "#FFFFFF",
-        background: "#F4F5F0",
-        line: "#DDE1D8",
-        info: "#1F8FC7",
-        danger: "#B3261E",
+        background: "#F2F2F7",
+        line: "#E5E5EA",
+        info: "#007AFF",
+        danger: "#FF3B30",
       },
       fontFamily: {
         display: ["Baloo2_800ExtraBold"],

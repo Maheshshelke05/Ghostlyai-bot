@@ -61,7 +61,7 @@ export default function PaymentsScreen() {
   return (
     <View className="flex-1 bg-background" style={{ paddingTop: insets.top + 8 }}>
       <View className="px-4 flex-row items-center justify-between mb-3">
-        <Text className="text-2xl font-extrabold text-ink">Payments</Text>
+        <Text className="text-[32px] font-bold text-ink tracking-tight">Payments</Text>
         <Pressable onPress={exportCsv}>
           <Text className="text-info text-sm font-semibold">Export CSV</Text>
         </Pressable>
@@ -115,7 +115,7 @@ function PaymentRowCard({
 }) {
   const { show } = useToast();
   return (
-    <View className="bg-surface border border-line/60 rounded-[18px] p-4 mb-3 mx-4">
+    <View className="bg-surface rounded-2xl p-4 mb-2 mx-4">
       <View className="flex-row justify-between items-start">
         <View className="flex-1 pr-2">
           <Text className="text-base font-semibold text-ink">{payment.user_name || "Unknown"}</Text>

@@ -1,10 +1,12 @@
+import * as Haptics from "expo-haptics";
 import { MotiView } from "moti";
-import { Platform, Text, View } from "react-native";
+import { useState } from "react";
+import { Platform, Pressable, Text, View } from "react-native";
 
 import { useCountUp } from "./useCountUp";
 
 const cardShadow = Platform.select({
-  ios: { shadowColor: "#1E2420", shadowOpacity: 0.05, shadowRadius: 8, shadowOffset: { width: 0, height: 3 } },
+  ios: { shadowColor: "#000000", shadowOpacity: 0.04, shadowRadius: 8, shadowOffset: { width: 0, height: 2 } },
   android: { elevation: 1 },
   default: {},
 });
@@ -16,21 +18,31 @@ interface StatCardProps {
   format?: (n: number) => string;
   trend?: number; // positive = green chip, negative = red chip
   delay?: number;
+  onPress?: () => void;
+  highlight?: boolean; // tinted card for numbers that need attention
 }
 
-export function StatCard({ label, value, icon, format, trend, delay = 0 }: StatCardProps) {
+export function StatCard({ label, value, icon, format, trend, delay = 0, onPress, highlight }: StatCardProps) {
   const animated = useCountUp(value);
+  const [pressed, setPressed] = useState(false);
   const display = format ? format(Math.round(animated)) : Math.round(animated).toLocaleString("en-IN");
 
   return (
     <MotiView
       from={{ opacity: 0, translateY: 10 }}
-      animate={{ opacity: 1, translateY: 0 }}
-      transition={{ type: "timing", duration: 280, delay }}
+      animate={{ opacity: 1, translateY: 0, scale: pressed ? 0.97 : 1 }}
+      transition={{ type: "spring", damping: 16, stiffness: 220, delay }}
       className="flex-1 min-w-[45%]"
     >
-      <View
-        className="rounded-[18px] bg-surface border border-line/60 p-4"
+      <Pressable
+        disabled={!onPress}
+        onPressIn={() => setPressed(true)}
+        onPressOut={() => setPressed(false)}
+        onPress={() => {
+          Haptics.selectionAsync().catch(() => {});
+          onPress?.();
+        }}
+        className={`rounded-2xl p-4 ${highlight ? "bg-brand-soft" : "bg-surface"}`}
         style={cardShadow}
       >
         <View className="flex-row items-center justify-between">
@@ -42,11 +54,13 @@ export function StatCard({ label, value, icon, format, trend, delay = 0 }: StatC
                 {trend}%
               </Text>
             </View>
+          ) : onPress ? (
+            <Text className="text-line text-base">›</Text>
           ) : null}
         </View>
-        <Text className="mt-2 text-2xl font-extrabold text-ink">{display}</Text>
-        <Text className="text-xs text-muted mt-0.5">{label}</Text>
-      </View>
+        <Text className={`mt-2 text-[26px] font-bold tracking-tight ${highlight ? "text-brand" : "text-ink"}`}>{display}</Text>
+        <Text className="text-[13px] text-muted mt-0.5">{label}</Text>
+      </Pressable>
     </MotiView>
   );
 }

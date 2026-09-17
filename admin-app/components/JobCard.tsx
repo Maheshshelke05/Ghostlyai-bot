@@ -33,7 +33,7 @@ export function JobCard({ job, onDelete }: { job: JobOut; onDelete: (job: JobOut
     >
       <Pressable
         onPress={() => router.push(`/jobs/${job.id}`)}
-        className="bg-surface border border-line/60 rounded-[18px] p-4 mb-3 mx-4"
+        className="bg-surface rounded-2xl p-4 mb-2 mx-4 active:opacity-70"
         style={cardShadow}
       >
         <View className="flex-row items-start justify-between">
