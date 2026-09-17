@@ -154,6 +154,7 @@ from app.api.admin.payments import router as admin_payments_router  # noqa: E402
 from app.api.admin.settings import router as admin_settings_router  # noqa: E402
 from app.api.admin.broadcast import router as admin_broadcast_router  # noqa: E402
 from app.api.admin.staff import router as admin_staff_router  # noqa: E402
+from app.api.admin.support import router as admin_support_router  # noqa: E402
 
 app.include_router(telegram_webhook_router)
 app.include_router(razorpay_webhook_router)
@@ -168,3 +169,4 @@ app.include_router(admin_payments_router)
 app.include_router(admin_settings_router)
 app.include_router(admin_broadcast_router)
 app.include_router(admin_staff_router)
+app.include_router(admin_support_router)

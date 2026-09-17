@@ -35,6 +35,13 @@ def remove_kb() -> ReplyKeyboardRemove:
     return ReplyKeyboardRemove()
 
 
+def support_kb(lang: str) -> InlineKeyboardMarkup:
+    builder = InlineKeyboardBuilder()
+    builder.button(text=t(lang, "cancel_btn"), callback_data="support:cancel")
+    builder.adjust(1)
+    return builder.as_markup()
+
+
 def resume_kb(lang: str) -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     builder.button(text=t(lang, "no_resume_btn"), callback_data="resume:none")

@@ -325,3 +325,27 @@ class Broadcast(Base):
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="queued")
     # queued | running | done
     created_at: Mapped[datetime] = mapped_column(TZDateTime, nullable=False, default=utcnow)
+
+
+class SupportMessage(Base):
+    """One message in a student's support thread, in either direction."""
+
+    __tablename__ = "support_messages"
+
+    id: Mapped[int] = mapped_column(BigIntPK, primary_key=True)
+    user_id: Mapped[int] = mapped_column(
+        BigInteger, ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    admin_id: Mapped[Optional[int]] = mapped_column(
+        Integer, ForeignKey("admins.id", ondelete="SET NULL")
+    )
+    direction: Mapped[str] = mapped_column(String(3), nullable=False)  # in | out
+    text: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(TZDateTime, nullable=False, default=utcnow)
+
+    user: Mapped["User"] = relationship()
+
+    __table_args__ = (
+        Index("ix_support_user_created", "user_id", "created_at"),
+        Index("ix_support_direction_created", "direction", "created_at"),
+    )

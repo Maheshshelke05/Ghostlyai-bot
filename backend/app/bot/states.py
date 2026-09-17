@@ -18,6 +18,10 @@ class Onboarding(StatesGroup):
     job_types = State()
 
 
+class Support(StatesGroup):
+    message = State()
+
+
 class Mode:
     """Why the user is currently walking through (parts of) the onboarding flow."""
 

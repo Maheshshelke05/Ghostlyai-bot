@@ -140,8 +140,12 @@ def csv_template() -> bytes:
     return output.getvalue().encode("utf-8-sig")
 
 
-def matching_jobs_stmt(user: User, limit: int, days_window: int = 7):
-    """SQLAlchemy select() for jobs matching a user, newest first (Chapter 10.1)."""
+def matching_jobs_stmt(user: User, limit: int, days_window: int = 7, min_age_minutes: int = 0):
+    """SQLAlchemy select() for jobs matching a user, newest first (Chapter 10.1).
+
+    `min_age_minutes` holds a freshly uploaded job back for a while, so an admin has time to
+    spot a typo or a wrong link before it reaches students.
+    """
     now = utcnow()
     since = now - timedelta(days=days_window)
 
@@ -158,6 +162,8 @@ def matching_jobs_stmt(user: User, limit: int, days_window: int = 7):
     ]
     if user.job_types:
         conditions.append(Job.job_type.in_(user.job_types))
+    if min_age_minutes > 0:
+        conditions.append(Job.created_at <= now - timedelta(minutes=min_age_minutes))
 
     stmt = (
         select(Job)
@@ -174,6 +180,12 @@ def today_ist() -> date:
     return datetime.now(settings.tz).date()
 
 
+async def job_delay_minutes(db: AsyncSession) -> int:
+    from app.services.access import get_setting
+
+    return int(await get_setting(db, "job_delay_minutes", 90))
+
+
 async def matching_jobs(db: AsyncSession, user: User, limit: int) -> list[Job]:
-    stmt = matching_jobs_stmt(user, limit)
+    stmt = matching_jobs_stmt(user, limit, min_age_minutes=await job_delay_minutes(db))
     return list((await db.execute(stmt)).scalars().all())

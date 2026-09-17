@@ -18,6 +18,7 @@ KNOWN_SETTINGS: dict[str, Any] = {
     "digest_max_jobs": 10,
     "max_categories": 3,
     "teaser_every_hours": 48,
+    "job_delay_minutes": 90,
     "last_digest_slot": None,
 }
 

@@ -122,7 +122,9 @@ async def make_job(
         last_date=last_date,
         status=status,
         fingerprint=fingerprint(title, company, link),
-        created_at=created_at or utcnow(),
+        # Default to a job that has already cleared the "hold new jobs back" window, so
+        # delivery tests exercise sending; tests about the delay itself pass created_at.
+        created_at=created_at or (utcnow() - timedelta(hours=2)),
     )
     db.add(job)
     await db.flush()

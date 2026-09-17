@@ -359,7 +359,9 @@ async def _after_details(
         await state.clear()
         await message.answer(t(lang, "profile_done_no_trial"))
         return
-    await _show_categories(message, state, db, user, lang, edit=False)
+    # job type first, then categories: "government or private?" is an easier first choice
+    # than a category list, and it frames the categories that follow
+    await _show_job_types(message, state, db, user, lang)
 
 
 # ---------------------------------------------------------------------------
@@ -459,7 +461,7 @@ async def on_category_action(
             return
         await callback.answer()
         await callback.message.edit_reply_markup(reply_markup=None)
-        await _show_job_types(callback.message, state, db, user, lang)
+        await _finish_onboarding(callback.message, state, db, user, lang)
         return
 
     # toggle a category id
@@ -545,7 +547,8 @@ async def on_job_type(callback: CallbackQuery, state: FSMContext, db: AsyncSessi
     if action == "next":
         await callback.answer()
         await callback.message.edit_reply_markup(reply_markup=None)
-        await _finish_onboarding(callback.message, state, db, user, lang)
+        await state.update_data(selected_job_types=selected)
+        await _show_categories(callback.message, state, db, user, lang, edit=False)
         return
 
     if action in selected:

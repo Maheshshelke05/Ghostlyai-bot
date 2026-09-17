@@ -95,12 +95,20 @@ TEXTS: dict[str, dict[str, str]] = {
         "help": (
             "ℹ️ मदत\n\n/jobs - आत्ताचे jobs\n/profile - प्रोफाइल पाहा/बदला\n"
             "/category - Category बदला\n/subscribe - Subscription\n"
-            "/language - भाषा बदला{support}"
+            "/language - भाषा बदला\n/support - तक्रार / मदत{support}"
         ),
         "support_line": "\n📞 Support: @{username}",
         "finish_onboarding": "👉 आधी प्रोफाइल पूर्ण करा. /start दाबा.",
         "any_location": "कुठेही",
         "not_given": "-",
+        "support_ask": "📩 तुमची तक्रार किंवा प्रश्न इथे लिहा. Admin लवकरच उत्तर देईल.",
+        "support_sent": "✅ तुमचा संदेश admin ला पाठवला आहे. उत्तर इथेच मिळेल.",
+        "support_too_short": "⚠️ कृपया थोडं सविस्तर लिहा (किमान 5 अक्षरे).",
+        "support_text_only": "⚠️ कृपया फक्त मजकूर (text) पाठवा.",
+        "support_cancelled": "ठीक आहे, रद्द केलं.",
+        "support_reply": "💬 Admin चं उत्तर:\n\n{text}",
+        "cancel_btn": "❌ रद्द करा",
+        "support_cmd_hint": "\n/support - तक्रार / मदत",
     },
     "hi": {
         "choose_language": "🙏 नमस्ते! Job Alert Bot में आपका स्वागत है.\n\nअपनी भाषा चुनें / Choose your language:",
@@ -190,12 +198,20 @@ TEXTS: dict[str, dict[str, str]] = {
         "help": (
             "ℹ️ मदद\n\n/jobs - अभी की jobs\n/profile - प्रोफाइल\n"
             "/category - Category बदलें\n/subscribe - Subscription\n"
-            "/language - भाषा बदलें{support}"
+            "/language - भाषा बदलें\n/support - शिकायत / मदद{support}"
         ),
         "support_line": "\n📞 Support: @{username}",
         "finish_onboarding": "👉 पहले प्रोफाइल पूरी करें. /start दबाएं.",
         "any_location": "कहीं भी",
         "not_given": "-",
+        "support_ask": "📩 अपनी शिकायत या सवाल यहाँ लिखें. Admin जल्दी जवाब देगा.",
+        "support_sent": "✅ आपका संदेश admin को भेज दिया है. जवाब यहीं मिलेगा.",
+        "support_too_short": "⚠️ कृपया थोड़ा विस्तार से लिखें (कम से कम 5 अक्षर).",
+        "support_text_only": "⚠️ कृपया सिर्फ टेक्स्ट भेजें.",
+        "support_cancelled": "ठीक है, रद्द कर दिया.",
+        "support_reply": "💬 Admin का जवाब:\n\n{text}",
+        "cancel_btn": "❌ रद्द करें",
+        "support_cmd_hint": "\n/support - शिकायत / मदद",
     },
     "en": {
         "choose_language": "🙏 Hello! Welcome to Job Alert Bot.\n\nChoose your language:",
@@ -285,12 +301,20 @@ TEXTS: dict[str, dict[str, str]] = {
         "help": (
             "ℹ️ Help\n\n/jobs - jobs now\n/profile - view/edit profile\n"
             "/category - change categories\n/subscribe - subscription\n"
-            "/language - change language{support}"
+            "/language - change language\n/support - help / complaint{support}"
         ),
         "support_line": "\n📞 Support: @{username}",
         "finish_onboarding": "👉 Please complete your profile first. Tap /start.",
         "any_location": "Anywhere",
         "not_given": "-",
+        "support_ask": "📩 Type your question or complaint here. An admin will reply soon.",
+        "support_sent": "✅ Your message has been sent to the admins. The reply will arrive here.",
+        "support_too_short": "⚠️ Please write a little more (at least 5 characters).",
+        "support_text_only": "⚠️ Please send text only.",
+        "support_cancelled": "Okay, cancelled.",
+        "support_reply": "💬 Reply from the admin:\n\n{text}",
+        "cancel_btn": "❌ Cancel",
+        "support_cmd_hint": "\n/support - help / complaint",
     },
 }
 

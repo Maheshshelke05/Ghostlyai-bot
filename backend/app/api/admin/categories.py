@@ -1,14 +1,17 @@
 """Category CRUD (Chapter 17.5). Slug is immutable once created."""
 from __future__ import annotations
 
+from datetime import timedelta
+
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import func, select
+from sqlalchemy import and_, exists, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.admin.deps import current_admin, owner_only
 from app.api.admin.schemas import CategoryIn, CategoryUpdate
-from app.db.models import Category, Job, UserCategory
+from app.db.models import Category, Job, JobDelivery, User, UserCategory, utcnow
 from app.db.session import get_db
+from app.services.jobs import job_delay_minutes
 
 router = APIRouter(prefix="/admin/categories", tags=["admin-categories"])
 
@@ -38,6 +41,84 @@ async def list_categories(db: AsyncSession = Depends(get_db), _admin=Depends(cur
         }
         for c in categories
     ]
+
+
+@router.get("/delivery-stats")
+async def delivery_stats(
+    days: int = 7, db: AsyncSession = Depends(get_db), _admin=Depends(current_admin)
+) -> dict:
+    """Per category: jobs added, how many were delivered, and how many students are still
+    waiting - i.e. subscribers who have a matching job that hasn't reached them yet."""
+    days = max(1, min(days, 90))
+    since = utcnow() - timedelta(days=days)
+    delay = await job_delay_minutes(db)
+    ready_before = utcnow() - timedelta(minutes=delay)
+
+    categories = (
+        await db.execute(select(Category).order_by(Category.sort_order, Category.id))
+    ).scalars().all()
+
+    jobs_rows = (await db.execute(
+        select(Job.category_id, func.count(Job.id))
+        .where(Job.status == "active", Job.created_at >= since)
+        .group_by(Job.category_id)
+    )).all()
+    pending_rows = (await db.execute(
+        select(Job.category_id, func.count(Job.id))
+        .where(Job.status == "active", Job.created_at >= since, Job.created_at > ready_before)
+        .group_by(Job.category_id)
+    )).all()
+    sent_rows = (await db.execute(
+        select(Job.category_id, func.count(JobDelivery.id))
+        .join(JobDelivery, JobDelivery.job_id == Job.id)
+        .where(Job.created_at >= since)
+        .group_by(Job.category_id)
+    )).all()
+    clicked_rows = (await db.execute(
+        select(Job.category_id, func.count(JobDelivery.id))
+        .join(JobDelivery, JobDelivery.job_id == Job.id)
+        .where(Job.created_at >= since, JobDelivery.clicked_at.is_not(None))
+        .group_by(Job.category_id)
+    )).all()
+    subscribers_rows = (await db.execute(
+        select(UserCategory.category_id, func.count(UserCategory.user_id))
+        .join(User, User.id == UserCategory.user_id)
+        .where(User.status == "active")
+        .group_by(UserCategory.category_id)
+    )).all()
+
+    jobs_map, pending_map = dict(jobs_rows), dict(pending_rows)
+    sent_map, clicked_map, subs_map = dict(sent_rows), dict(clicked_rows), dict(subscribers_rows)
+
+    items = []
+    for c in categories:
+        # students subscribed to this category who still have an undelivered ready job
+        waiting = (await db.execute(
+            select(func.count(func.distinct(UserCategory.user_id)))
+            .select_from(UserCategory)
+            .join(User, User.id == UserCategory.user_id)
+            .join(Job, Job.category_id == UserCategory.category_id)
+            .where(
+                UserCategory.category_id == c.id,
+                User.status == "active",
+                Job.status == "active",
+                Job.created_at >= since,
+                Job.created_at <= ready_before,
+                ~exists().where(and_(JobDelivery.job_id == Job.id, JobDelivery.user_id == User.id)),
+            )
+        )).scalar_one()
+
+        items.append({
+            "category_id": c.id, "slug": c.slug, "name": c.name, "is_active": c.is_active,
+            "jobs": jobs_map.get(c.id, 0),
+            "jobs_waiting_to_send": pending_map.get(c.id, 0),
+            "subscribers": subs_map.get(c.id, 0),
+            "sent": sent_map.get(c.id, 0),
+            "clicked": clicked_map.get(c.id, 0),
+            "students_waiting": waiting,
+        })
+
+    return {"days": days, "job_delay_minutes": delay, "items": items}
 
 
 @router.post("")

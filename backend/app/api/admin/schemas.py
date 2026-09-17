@@ -117,6 +117,7 @@ class SettingsIn(BaseModel):
     digest_max_jobs: Optional[int] = Field(default=None, gt=0, le=50)
     max_categories: Optional[int] = Field(default=None, gt=0, le=10)
     teaser_every_hours: Optional[int] = Field(default=None, gt=0)
+    job_delay_minutes: Optional[int] = Field(default=None, ge=0, le=1440)
 
     @field_validator("digest_times")
     @classmethod

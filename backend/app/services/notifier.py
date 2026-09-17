@@ -16,7 +16,7 @@ from app.bot.keyboards import apply_kb
 from app.bot.texts import t
 from app.config import settings
 from app.db.models import Job, JobDelivery, User, utcnow
-from app.services.jobs import matching_jobs, matching_jobs_stmt
+from app.services.jobs import job_delay_minutes, matching_jobs, matching_jobs_stmt
 
 logger = logging.getLogger("app.notifier")
 
@@ -124,7 +124,7 @@ async def safe_send(bot: Bot, chat_id: int, text: str, markup=None) -> str:
 
 
 async def count_matching_jobs(db: AsyncSession, user: User, limit: int = 100) -> int:
-    stmt = matching_jobs_stmt(user, limit)
+    stmt = matching_jobs_stmt(user, limit, min_age_minutes=await job_delay_minutes(db))
     rows = (await db.execute(stmt)).scalars().all()
     return len(rows)
 

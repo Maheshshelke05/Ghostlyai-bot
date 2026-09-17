@@ -12,7 +12,8 @@ _COMMANDS: dict[str, list[tuple[str, str]]] = {
         ("category", "Change job categories"),
         ("subscribe", "Subscription status & payment"),
         ("language", "Change language"),
-        ("help", "Help and support"),
+        ("support", "Ask a question / report a problem"),
+        ("help", "All commands"),
     ],
     "mr": [
         ("start", "सुरुवात / प्रोफाइल स्टेटस"),
@@ -21,7 +22,8 @@ _COMMANDS: dict[str, list[tuple[str, str]]] = {
         ("category", "Category बदला"),
         ("subscribe", "Subscription स्टेटस व पेमेंट"),
         ("language", "भाषा बदला"),
-        ("help", "मदत"),
+        ("support", "तक्रार / प्रश्न विचारा"),
+        ("help", "सर्व commands"),
     ],
     "hi": [
         ("start", "शुरुआत / प्रोफाइल स्टेटस"),
@@ -30,7 +32,8 @@ _COMMANDS: dict[str, list[tuple[str, str]]] = {
         ("category", "Category बदलें"),
         ("subscribe", "Subscription स्टेटस व पेमेंट"),
         ("language", "भाषा बदलें"),
-        ("help", "मदद"),
+        ("support", "शिकायत / सवाल पूछें"),
+        ("help", "सभी commands"),
     ],
 }
 
