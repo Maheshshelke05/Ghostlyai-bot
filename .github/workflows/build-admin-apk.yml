@@ -64,6 +64,14 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x android/gradlew
 
+      # The prebuilt gradle.properties caps the JVM at 2 GiB, which is enough for most builds
+      # but D8 dex merging hit OutOfMemoryError once. Runners have 7 GiB, so give Gradle 4.
+      - name: Raise Gradle JVM memory
+        run: |
+          sed -i 's/^org.gradle.jvmargs=.*/org.gradle.jvmargs=-Xmx4096m -XX:MaxMetaspaceSize=1024m -XX:+HeapDumpOnOutOfMemoryError/' android/gradle.properties
+          grep -q '^org.gradle.jvmargs=' android/gradle.properties || echo 'org.gradle.jvmargs=-Xmx4096m -XX:MaxMetaspaceSize=1024m' >> android/gradle.properties
+          grep '^org.gradle.jvmargs=' android/gradle.properties
+
       - name: Build Android Release APK
         working-directory: admin-app/android
         run: ./gradlew assembleRelease --no-daemon
