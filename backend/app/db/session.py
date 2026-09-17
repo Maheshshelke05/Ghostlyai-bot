@@ -22,6 +22,10 @@ def _prepare_asyncpg_url(raw_url: str) -> tuple[str, dict[str, Any]]:
     """
     parts = urlsplit(raw_url)
     scheme = parts.scheme
+    if not scheme.startswith("postgres"):
+        # Non-Postgres URLs (e.g. CI's sqlite+aiosqlite:///:memory:) pass through untouched:
+        # urlunsplit drops the "//" when netloc is empty, turning it into an unparseable URL.
+        return raw_url, {}
     if scheme in ("postgres", "postgresql"):
         scheme = "postgresql+asyncpg"
 

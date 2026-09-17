@@ -38,3 +38,13 @@ def test_other_query_params_are_preserved():
 
     assert "application_name=jobbot" in cleaned
     assert connect_args == {"ssl": True}
+
+
+def test_sqlite_url_is_left_untouched():
+    # CI runs with this URL; rebuilding it via urlunsplit dropped the "//" and broke engine
+    # creation at import time, failing collection of every test module that imports the session.
+    raw = "sqlite+aiosqlite:///:memory:"
+    cleaned, connect_args = _prepare_asyncpg_url(raw)
+
+    assert cleaned == raw
+    assert connect_args == {}
