@@ -29,7 +29,7 @@ export function ExcelUploadTab() {
         show(`Template saved: ${file.uri}`, "success");
       }
     } catch (err) {
-      show(apiErrorMessage(err, "Template download zala nahi"), "error");
+      show(apiErrorMessage(err, "Could not download the template"), "error");
     } finally {
       setDownloading(false);
     }
@@ -53,7 +53,7 @@ export function ExcelUploadTab() {
       const res = await bulkUploadJobs({ uri: asset.uri, name: asset.name, mimeType: asset.mimeType });
       setResult(res);
     } catch (err) {
-      show(apiErrorMessage(err, "Upload fail zala"), "error");
+      show(apiErrorMessage(err, "Upload failed"), "error");
     } finally {
       setUploading(false);
     }
@@ -62,16 +62,16 @@ export function ExcelUploadTab() {
   return (
     <View className="p-4">
       <Text className="text-sm text-muted mb-3">
-        Template download kara, jobs bhara, mag file upload kara. Columns: title, company,
+        Download the template, fill in your jobs, then upload the file. Columns: title, company,
         category_slug, qualification, location_text, job_type, salary, apply_link,
         last_date, description.
       </Text>
 
-      <Button label="📄 Template download" variant="ghost" onPress={downloadTemplate} loading={downloading} />
+      <Button label="📄 Download template" variant="ghost" onPress={downloadTemplate} loading={downloading} />
 
       <View className="h-3" />
 
-      <Button label="📤 File nivda aani upload kara" variant="brand" onPress={pickAndUpload} loading={uploading} />
+      <Button label="📤 Choose file & upload" variant="brand" onPress={pickAndUpload} loading={uploading} />
 
       {uploading ? (
         <View className="items-center mt-6">

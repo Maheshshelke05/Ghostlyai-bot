@@ -49,11 +49,11 @@ export default function UsersListScreen() {
     <View className="flex-1 bg-background" style={{ paddingTop: insets.top + 8 }}>
       <View className="px-4">
         <Text className="text-2xl font-extrabold text-ink mb-3">Users</Text>
-        <SearchBar value={query} onChangeText={setQuery} placeholder="Naav, phone, username" />
+        <SearchBar value={query} onChangeText={setQuery} placeholder="Name, phone or username" />
         <View className="flex-row flex-wrap">
           {(
             [
-              ["all", "Sagle"],
+              ["all", "All"],
               ["paid", "Paid"],
               ["trial", "Trial"],
               ["none", "Expired"],
@@ -70,7 +70,7 @@ export default function UsersListScreen() {
       {isLoading ? (
         <ListSkeleton />
       ) : users.length === 0 ? (
-        <EmptyState emoji="👥" title="Kontihi users sapadle nahit." />
+        <EmptyState emoji="👥" title="No users found." />
       ) : (
         <FlashList
           data={users}

@@ -45,7 +45,7 @@ export default function JobsListScreen() {
   const deleteMutation = useMutation({
     mutationFn: (id: number) => deleteJob(id),
     onSuccess: () => {
-      show("Job delete zala", "success");
+      show("Job deleted", "success");
       queryClient.invalidateQueries({ queryKey: ["jobs"] });
     },
     onError: (err) => show(apiErrorMessage(err), "error"),
@@ -64,7 +64,7 @@ export default function JobsListScreen() {
         <Text className="text-2xl font-extrabold text-ink mb-3">Jobs</Text>
         <SearchBar value={query} onChangeText={setQuery} placeholder="Search title / company" />
         <View className="flex-row flex-wrap">
-          <Chip label="Aaj" selected={filter === "today"} onPress={() => setFilter(filter === "today" ? "all" : "today")} />
+          <Chip label="Today" selected={filter === "today"} onPress={() => setFilter(filter === "today" ? "all" : "today")} />
           <Chip label="Active" selected={filter === "active"} onPress={() => setFilter(filter === "active" ? "all" : "active")} />
           <Chip label="Expired" selected={filter === "expired"} onPress={() => setFilter(filter === "expired" ? "all" : "expired")} />
         </View>
@@ -77,7 +77,7 @@ export default function JobsListScreen() {
       ) : jobs.length === 0 ? (
         <EmptyState
           emoji="💼"
-          title="Aaj ajun job upload nahi. Pahila job add kara."
+          title="No jobs yet. Add your first job."
           actionLabel="Add job"
           onAction={() => router.push("/jobs/new")}
         />

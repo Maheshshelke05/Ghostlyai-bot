@@ -70,7 +70,7 @@ export default function CategoriesScreen() {
       {isOwner ? (
         <View className="absolute bottom-6 left-4 right-4">
           <Button
-            label="+ Navin category"
+            label="+ New category"
             variant="brand"
             onPress={() => {
               setEditing(null);
@@ -107,12 +107,12 @@ const CategoryEditSheet = forwardRef<
 
   const submit = async () => {
     if (!name.trim()) {
-      show("Name bhara", "warn");
+      show("Enter a name", "warn");
       return;
     }
     const normalizedSlug = slug.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
     if (!category && !normalizedSlug) {
-      show("Valid slug bhara (e.g. banking)", "warn");
+      show("Enter a valid slug (e.g. banking)", "warn");
       return;
     }
     setLoading(true);
@@ -123,7 +123,7 @@ const CategoryEditSheet = forwardRef<
         await createCategory({ slug: normalizedSlug, name: name.trim(), name_mr: nameMr, name_hi: nameHi });
       }
       queryClient.invalidateQueries({ queryKey: ["categories"] });
-      show("Category save zali", "success");
+      show("Category saved", "success");
       (ref as React.RefObject<BottomSheetModal>).current?.dismiss();
     } catch (err) {
       show(apiErrorMessage(err), "error");

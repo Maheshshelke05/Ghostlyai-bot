@@ -24,9 +24,9 @@ export function CrashScreen({ error, componentStack, onRestart }: Props) {
   return (
     <View className="flex-1 bg-background px-6 pt-16 pb-8">
       <Text className="text-4xl mb-3 text-center">⚠️</Text>
-      <Text className="text-lg font-bold text-ink mb-2 text-center">App crash zala</Text>
+      <Text className="text-lg font-bold text-ink mb-2 text-center">Something went wrong</Text>
       <Text className="text-sm text-muted mb-4 text-center">
-        Khali cha detail "Copy" karun Mahesh la pathav - exact karan tyat aahe.
+        Tap "Copy error details" and send them to support - they show exactly what failed.
       </Text>
 
       <ScrollView className="flex-1 bg-surface border border-line rounded-2xl p-3 mb-4">

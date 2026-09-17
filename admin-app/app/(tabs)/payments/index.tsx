@@ -51,7 +51,7 @@ export default function PaymentsScreen() {
         await Sharing.shareAsync(file.uri, { mimeType: "text/csv" });
       }
     } catch (err) {
-      show(apiErrorMessage(err, "Export fail zala"), "error");
+      show(apiErrorMessage(err, "Export failed"), "error");
     }
   };
 
@@ -74,7 +74,7 @@ export default function PaymentsScreen() {
       </View>
 
       <View className="px-4 flex-row flex-wrap">
-        <Chip label="Sagle" selected={filter === "all"} onPress={() => setFilter("all")} />
+        <Chip label="All" selected={filter === "all"} onPress={() => setFilter("all")} />
         <Chip label="Paid" selected={filter === "paid"} onPress={() => setFilter("paid")} />
         <Chip label="Created" selected={filter === "created"} onPress={() => setFilter("created")} />
         <Chip label="Expired" selected={filter === "expired"} onPress={() => setFilter("expired")} />
@@ -83,7 +83,7 @@ export default function PaymentsScreen() {
       {isLoading ? (
         <ListSkeleton />
       ) : items.length === 0 ? (
-        <EmptyState emoji="💳" title="Kontihi payments nahit." />
+        <EmptyState emoji="💳" title="No payments yet." />
       ) : (
         <FlashList
           data={items}
@@ -142,7 +142,7 @@ function PaymentRowCard({
       ) : null}
       {payment.status === "created" ? (
         <View className="mt-3">
-          <Button label="Razorpay var check" variant="ghost" onPress={onSync} loading={syncing} fullWidth={false} />
+          <Button label="Check on Razorpay" variant="ghost" onPress={onSync} loading={syncing} fullWidth={false} />
         </View>
       ) : null}
     </View>

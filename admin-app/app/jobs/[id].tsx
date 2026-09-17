@@ -24,7 +24,7 @@ export default function JobEditScreen() {
   const deleteMutation = useMutation({
     mutationFn: () => deleteJob(jobId),
     onSuccess: () => {
-      show("Job delete zala", "success");
+      show("Job deleted", "success");
       queryClient.invalidateQueries({ queryKey: ["jobs"] });
       router.back();
     },
@@ -64,14 +64,14 @@ export default function JobEditScreen() {
             salary: job.salary ?? "",
             apply_link: job.apply_link,
             last_date: job.last_date ?? "",
-            description: "",
+            description: job.description ?? "",
           }}
           submitLabel="Update job"
           onSubmit={async (data) => {
             await updateJob(jobId, data);
             queryClient.invalidateQueries({ queryKey: ["jobs"] });
             queryClient.invalidateQueries({ queryKey: ["job", jobId] });
-            show("Job update zala", "success");
+            show("Job updated", "success");
             router.back();
           }}
         />
@@ -91,6 +91,7 @@ export default function JobEditScreen() {
                   dup_location_text: job.location_text ?? "",
                   dup_job_type: job.job_type,
                   dup_salary: job.salary ?? "",
+                  dup_description: job.description ?? "",
                   // apply_link and last_date are almost always specific to this exact
                   // posting, so they're intentionally left blank on the duplicate.
                 },

@@ -46,7 +46,7 @@ export default function UserDetailScreen() {
   const blockMutation = useMutation({
     mutationFn: () => (data?.user.status === "blocked" ? unblockUser(userId) : blockUser(userId)),
     onSuccess: () => {
-      show("Status update zala", "success");
+      show("Status updated", "success");
       invalidate();
     },
     onError: (err) => show(apiErrorMessage(err), "error"),
@@ -55,7 +55,7 @@ export default function UserDetailScreen() {
   const deleteMutation = useMutation({
     mutationFn: () => deleteUser(userId),
     onSuccess: () => {
-      show("User data delete zala", "success");
+      show("User data deleted", "success");
       queryClient.invalidateQueries({ queryKey: ["users"] });
       router.back();
     },
@@ -74,7 +74,7 @@ export default function UserDetailScreen() {
         show(`Resume saved: ${file.uri}`, "success");
       }
     } catch (err) {
-      show(apiErrorMessage(err, "Resume download zala nahi"), "error");
+      show(apiErrorMessage(err, "Could not download the resume"), "error");
     }
   }, [userId, token, show]);
 
@@ -139,7 +139,7 @@ export default function UserDetailScreen() {
             </View>
             {profile.has_resume ? (
               <View className="mt-3">
-                <Button label="📄 Resume download" variant="ghost" onPress={downloadResume} />
+                <Button label="📄 Download resume" variant="ghost" onPress={downloadResume} />
               </View>
             ) : null}
           </Card>
@@ -157,7 +157,7 @@ export default function UserDetailScreen() {
         <Card className="mb-3">
           <Text className="text-sm font-bold text-ink mb-2">Jobs received ({stats.sent} sent, {stats.clicks} clicked)</Text>
           {recent_deliveries.length === 0 ? (
-            <Text className="text-xs text-muted">Ajun kahi pathvle nahi.</Text>
+            <Text className="text-xs text-muted">No jobs sent yet.</Text>
           ) : (
             recent_deliveries.map((d, i) => (
               <View key={i} className="flex-row justify-between py-1.5 border-b border-line/40">
@@ -173,7 +173,7 @@ export default function UserDetailScreen() {
         <Card className="mb-3">
           <Text className="text-sm font-bold text-ink mb-2">Payments</Text>
           {payments.length === 0 ? (
-            <Text className="text-xs text-muted">Kontihi payment nahi.</Text>
+            <Text className="text-xs text-muted">No payments yet.</Text>
           ) : (
             payments.map((p) => (
               <View key={p.id} className="flex-row justify-between py-1.5 border-b border-line/40">
@@ -186,15 +186,15 @@ export default function UserDetailScreen() {
         </Card>
 
         <View className="gap-3 mt-2">
-          <Button label="➕ Divas vadhva" variant="primary" onPress={() => extendSheetRef.current?.present()} />
-          <Button label="✉️ Message pathva" variant="ghost" onPress={() => messageSheetRef.current?.present()} />
+          <Button label="➕ Extend subscription" variant="primary" onPress={() => extendSheetRef.current?.present()} />
+          <Button label="✉️ Send message" variant="ghost" onPress={() => messageSheetRef.current?.present()} />
           <Button
             label={user.status === "blocked" ? "Unblock" : "⛔ Block"}
             variant={user.status === "blocked" ? "primary" : "danger"}
             onPress={() => blockMutation.mutate()}
             loading={blockMutation.isPending}
           />
-          <Button label="🗑 Data delete" variant="danger" onPress={() => deleteSheetRef.current?.present()} />
+          <Button label="🗑 Delete user data" variant="danger" onPress={() => deleteSheetRef.current?.present()} />
         </View>
       </ScrollView>
 
@@ -203,7 +203,7 @@ export default function UserDetailScreen() {
       <ConfirmSheet
         ref={deleteSheetRef}
         title="Delete this user's data?"
-        message="Profile, resume aani history kadhli jail. Payments record theva jail (accounting sathi)."
+        message="Their profile, resume and job history will be removed. Payment records are kept for accounting."
         confirmLabel="Delete permanently"
         onConfirm={() => {
           deleteMutation.mutate();
@@ -240,11 +240,14 @@ const ExtendSheet = forwardRef<BottomSheetModal, { userId: number; onDone: () =>
 
   const submit = async () => {
     const value = custom ? parseInt(custom, 10) : days;
-    if (!value || value <= 0) return;
+    if (!value || value <= 0) {
+      show("Enter a number of days greater than 0", "warn");
+      return;
+    }
     setLoading(true);
     try {
       await extendUser(userId, value, notify);
-      show(`${value} divas vadhvle`, "success");
+      show(`Extended by ${value} ${value === 1 ? "day" : "days"}`, "success");
       onDone();
       (ref as React.RefObject<BottomSheetModal>).current?.dismiss();
     } catch (err) {
@@ -262,7 +265,7 @@ const ExtendSheet = forwardRef<BottomSheetModal, { userId: number; onDone: () =>
           {[7, 15, 30].map((d) => (
             <Chip
               key={d}
-              label={`${d} divas`}
+              label={`${d} days`}
               selected={days === d && !custom}
               onPress={() => {
                 setDays(d);
@@ -274,12 +277,12 @@ const ExtendSheet = forwardRef<BottomSheetModal, { userId: number; onDone: () =>
         <BottomSheetTextInput
           value={custom}
           onChangeText={setCustom}
-          placeholder="Custom divas"
+          placeholder="Custom number of days"
           keyboardType="number-pad"
           className="bg-background rounded-xl px-4 py-3 text-ink mb-4"
         />
         <View className="flex-row items-center justify-between mb-5">
-          <Text className="text-sm text-ink">Student la notify kara</Text>
+          <Text className="text-sm text-ink">Notify the student</Text>
           <Switch value={notify} onValueChange={setNotify} />
         </View>
         <Button label="Confirm" onPress={submit} loading={loading} />
@@ -303,7 +306,12 @@ const MessageSheet = forwardRef<BottomSheetModal, { userId: number }>(function M
     setLoading(true);
     try {
       const res = await messageUser(userId, text.trim());
-      show(res.result === "ok" ? "Message pathvla" : `Result: ${res.result}`, res.result === "ok" ? "success" : "warn");
+      const outcome: Record<string, string> = {
+        ok: "Message sent",
+        blocked: "Not delivered - this student has blocked the bot",
+        error: "Message could not be sent",
+      };
+      show(outcome[res.result] ?? `Result: ${res.result}`, res.result === "ok" ? "success" : "warn");
       setText("");
       (ref as React.RefObject<BottomSheetModal>).current?.dismiss();
     } catch (err) {

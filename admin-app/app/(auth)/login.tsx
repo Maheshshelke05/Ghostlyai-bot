@@ -44,7 +44,7 @@ export default function LoginScreen() {
     try {
       await login(data.email.trim().toLowerCase(), data.password);
     } catch (err) {
-      setServerError(apiErrorMessage(err, "Email kiva password chukicha"));
+      setServerError(apiErrorMessage(err, "Incorrect email or password"));
       setShakeKey((k) => k + 1);
     } finally {
       setLoading(false);
@@ -123,7 +123,7 @@ export default function LoginScreen() {
             <View className="mt-6 items-center">
               <Pressable onPress={runConnectionCheck} hitSlop={10}>
                 <Text className="text-xs text-muted underline">
-                  {checking ? "Checking..." : "Server connection check kara"}
+                  {checking ? "Checking..." : "Check server connection"}
                 </Text>
               </Pressable>
               <Text className="text-[10px] text-muted/70 mt-1 text-center">{API_URL}</Text>
@@ -131,7 +131,7 @@ export default function LoginScreen() {
                 <Text
                   className={`text-xs mt-2 text-center ${checkResult.ok ? "text-go" : "text-danger"}`}
                 >
-                  {checkResult.ok ? "✓ Server reachable — " : "✗ Server la pochu shaklo nahi — "}
+                  {checkResult.ok ? "✓ Server reachable — " : "✗ Server unreachable — "}
                   {checkResult.detail}
                 </Text>
               ) : null}

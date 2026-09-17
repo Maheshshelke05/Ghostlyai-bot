@@ -98,12 +98,12 @@ export function JobForm({
         if (mode === "save-new" && onSubmitAndNew) {
           await onSubmitAndNew(toJobIn(data));
           reset({ job_type: data.job_type, category_slug: data.category_slug });
-          show("Job save zala", "success");
+          show("Job saved", "success");
         } else {
           await onSubmit(toJobIn(data));
         }
       } catch (err) {
-        show(apiErrorMessage(err, "Job save zala nahi"), "error");
+        show(apiErrorMessage(err, "Could not save the job"), "error");
       } finally {
         setSubmitting(null);
       }
@@ -209,11 +209,11 @@ export function JobForm({
       </Pressable>
       {showDatePicker ? (
         <DateTimePicker
-          value={lastDate ? new Date(lastDate) : new Date()}
+          value={lastDate ? parseLocalDate(lastDate) : new Date()}
           mode="date"
           onChange={(_, date) => {
             setShowDatePicker(Platform.OS === "ios");
-            if (date) setValue("last_date", date.toISOString().slice(0, 10));
+            if (date) setValue("last_date", toLocalDateString(date));
           }}
         />
       ) : null}
@@ -240,7 +240,7 @@ export function JobForm({
         <Button label={submitLabel} onPress={() => submit("save")} loading={submitting === "save"} variant="primary" />
         {showSaveAndNew ? (
           <Button
-            label="Save aani navin"
+            label="Save & add another"
             onPress={() => submit("save-new")}
             loading={submitting === "save-new"}
             variant="ghost"
@@ -263,6 +263,20 @@ export function JobForm({
 }
 
 const inputClass = "bg-surface border border-line rounded-2xl px-4 py-3.5 text-ink mb-1";
+
+// Build YYYY-MM-DD from the phone's local calendar date. toISOString() converts to UTC first,
+// so anything picked between 00:00 and 05:30 IST came out as the previous day.
+function toLocalDateString(date: Date): string {
+  const mm = String(date.getMonth() + 1).padStart(2, "0");
+  const dd = String(date.getDate()).padStart(2, "0");
+  return `${date.getFullYear()}-${mm}-${dd}`;
+}
+
+// new Date("YYYY-MM-DD") parses as UTC midnight; construct it as a local date instead
+function parseLocalDate(value: string): Date {
+  const [y, m, d] = value.split("-").map(Number);
+  return new Date(y, (m ?? 1) - 1, d ?? 1);
+}
 
 function FieldLabel({ text }: { text: string }) {
   return <Text className="text-sm font-semibold text-muted mb-1.5 mt-3">{text}</Text>;

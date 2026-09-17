@@ -36,7 +36,7 @@ export default function AiReviewScreen() {
   if (drafts.length === 0) {
     return (
       <View className="flex-1 bg-background">
-        <EmptyState emoji="🤖" title="Kontihi drafts nahit. Aadhi AI paste tab varun jobs kadha." />
+        <EmptyState emoji="🤖" title="No drafts yet. Extract jobs from the AI paste tab first." />
       </View>
     );
   }
@@ -50,7 +50,7 @@ export default function AiReviewScreen() {
       clear();
       router.back();
     } catch (err) {
-      show(apiErrorMessage(err, "Save fail zala"), "error");
+      show(apiErrorMessage(err, "Could not save the drafts"), "error");
     } finally {
       setSaving(false);
     }
@@ -104,7 +104,7 @@ export default function AiReviewScreen() {
       </ScrollView>
 
       <View className="absolute bottom-0 left-0 right-0 bg-background border-t border-line px-4 pt-3 pb-6">
-        <Button label={`Sagle save (${drafts.length})`} onPress={saveAll} loading={saving} variant="primary" />
+        <Button label={`Save all (${drafts.length})`} onPress={saveAll} loading={saving} variant="primary" />
       </View>
     </View>
   );

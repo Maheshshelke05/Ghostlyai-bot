@@ -17,7 +17,7 @@ import {
 } from "@/lib/api";
 
 const AUDIENCES: { value: Audience; label: string }[] = [
-  { value: "all", label: "Sagle active" },
+  { value: "all", label: "All active" },
   { value: "paid", label: "Paid" },
   { value: "trial", label: "Trial" },
   { value: "expired", label: "Expired" },
@@ -81,7 +81,7 @@ export default function BroadcastScreen() {
 
         <Text className="text-sm font-semibold text-muted mb-1.5 mt-2">Category (optional)</Text>
         <View className="flex-row flex-wrap mb-3">
-          <Chip label="Sagle categories" selected={categoryId === undefined} onPress={() => setCategoryId(undefined)} />
+          <Chip label="All categories" selected={categoryId === undefined} onPress={() => setCategoryId(undefined)} />
           {(categories ?? []).map((c) => (
             <Chip key={c.id} label={c.name} selected={categoryId === c.id} onPress={() => setCategoryId(c.id)} />
           ))}
@@ -106,7 +106,7 @@ export default function BroadcastScreen() {
         ) : null}
 
         <Text className="text-sm text-muted mb-4">
-          {loadingCount ? "Counting..." : `Ha message ${count ?? 0} lokanna jail`}
+          {loadingCount ? "Counting..." : `This message will go to ${count ?? 0} ${count === 1 ? "student" : "students"}`}
         </Text>
 
         <Button
@@ -128,7 +128,7 @@ export default function BroadcastScreen() {
       <ConfirmSheet
         ref={confirmRef}
         title="Send this broadcast?"
-        message={`${count ?? 0} students la message jail. Aathavdyat 2 peksha jast broadcast nako.`}
+        message={`This will message ${count ?? 0} students. Avoid sending more than 2 broadcasts a week.`}
         confirmLabel="Send"
         danger={false}
         onConfirm={() => {

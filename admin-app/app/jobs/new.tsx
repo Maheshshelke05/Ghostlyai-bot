@@ -25,6 +25,7 @@ export default function NewJobScreen() {
     dup_location_text?: string;
     dup_job_type?: string;
     dup_salary?: string;
+    dup_description?: string;
   }>();
   const isDuplicate = !!params.dup_title;
   const [tab, setTab] = useState<TabKey>("form");
@@ -39,6 +40,7 @@ export default function NewJobScreen() {
         location_text: params.dup_location_text,
         job_type: (params.dup_job_type as JobFormData["job_type"]) || undefined,
         salary: params.dup_salary,
+        description: params.dup_description,
         apply_link: "",
         last_date: "",
       }

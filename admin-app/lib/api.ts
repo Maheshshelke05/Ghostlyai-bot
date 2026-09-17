@@ -40,12 +40,25 @@ apiClient.interceptors.response.use(
   }
 );
 
+type ValidationIssue = { loc?: (string | number)[]; msg?: string };
+
 export function apiErrorMessage(error: unknown, fallback = "Something went wrong"): string {
   if (axios.isAxiosError(error)) {
-    const detail = (error.response?.data as { detail?: string } | undefined)?.detail;
+    const detail = (error.response?.data as { detail?: string | ValidationIssue[] } | undefined)?.detail;
     if (typeof detail === "string") return detail;
-    if (error.code === "ECONNABORTED") return `Server jaste time gheत ahe (timeout) - ${API_URL} la connect karat aslela request 20 sec madhe pura zala nahi.`;
-    if (error.request && !error.response) return `Server la pochu shaklo nahi (${API_URL}). Internet/WiFi check kar, kiva he network ha domain block karat asel.`;
+    // FastAPI 422s carry a list of {loc, msg}; show those instead of "status code 422"
+    if (Array.isArray(detail) && detail.length > 0) {
+      return detail
+        .map((issue) => {
+          const field = (issue.loc ?? []).filter((part) => part !== "body").join(" > ");
+          return field ? `${field}: ${issue.msg ?? "invalid"}` : issue.msg ?? "invalid";
+        })
+        .join("\n");
+    }
+    if (error.code === "ECONNABORTED") return `The server took too long to respond (${API_URL}). Please try again.`;
+    if (error.request && !error.response) {
+      return `Could not reach the server (${API_URL}). Check your internet connection.`;
+    }
     if (error.message) return error.message;
   }
   return fallback;
@@ -104,6 +117,7 @@ export interface JobOut {
   salary: string | null;
   apply_link: string;
   last_date: string | null;
+  description: string | null;
   status: "active" | "expired" | "deleted";
   created_at: string;
   sent_count: number;

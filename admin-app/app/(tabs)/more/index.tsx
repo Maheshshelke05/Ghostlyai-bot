@@ -73,18 +73,18 @@ const ChangePasswordSheet = forwardRef<BottomSheetModal, { renderBackdrop: (prop
 
     const submit = async () => {
       if (newPassword.length < 8) {
-        show("Navin password kamit kami 8 akshari asava", "warn");
+        show("New password must be at least 8 characters", "warn");
         return;
       }
       setLoading(true);
       try {
         await changePassword(oldPassword, newPassword);
-        show("Password badalla", "success");
+        show("Password changed", "success");
         setOldPassword("");
         setNewPassword("");
         (ref as React.RefObject<BottomSheetModal>).current?.dismiss();
       } catch (err) {
-        show(apiErrorMessage(err, "Password badalla nahi"), "error");
+        show(apiErrorMessage(err, "Could not change password"), "error");
       } finally {
         setLoading(false);
       }

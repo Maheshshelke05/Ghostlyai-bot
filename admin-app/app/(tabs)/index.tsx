@@ -34,7 +34,7 @@ export default function DashboardScreen() {
     return (
       <View className="flex-1 bg-background items-center justify-center px-6">
         <Text className="text-muted text-center mb-4">
-          {apiErrorMessage(error, "Data load zala nahi. Internet check kara.")}
+          {apiErrorMessage(error, "Couldn't load the dashboard. Check your internet connection.")}
         </Text>
         <Button label="Retry" onPress={() => refetch()} variant="brand" fullWidth={false} />
       </View>
@@ -59,7 +59,7 @@ export default function DashboardScreen() {
         transition={{ type: "timing", duration: 300 }}
         className="px-4 pt-14 pb-2"
       >
-        <Text className="text-2xl font-extrabold text-ink">Namaskar, {admin?.name ?? "Owner"} 👋</Text>
+        <Text className="text-2xl font-extrabold text-ink">Hello, {admin?.name ?? "Owner"} 👋</Text>
         <Text className="text-muted text-sm mt-0.5">{new Date().toDateString()}</Text>
       </MotiView>
 
@@ -75,12 +75,12 @@ export default function DashboardScreen() {
           end={{ x: 1, y: 1 }}
           style={{ borderRadius: 20, padding: 20 }}
         >
-          <Text className="text-brand-ink/80 text-sm font-semibold">Aajchi kamai</Text>
+          <Text className="text-brand-ink/80 text-sm font-semibold">Today's revenue</Text>
           <Text className="text-4xl font-extrabold text-brand-ink mt-1">
             ₹{Math.round(revenue).toLocaleString("en-IN")}
           </Text>
           <Text className="text-brand-ink/70 text-xs mt-1">
-            Ya mahinyachi ₹{data.revenue_inr.month.toLocaleString("en-IN")}
+            This month: ₹{data.revenue_inr.month.toLocaleString("en-IN")}
           </Text>
         </LinearGradient>
       </MotiView>
@@ -88,9 +88,9 @@ export default function DashboardScreen() {
       <View className="flex-row flex-wrap gap-3 px-4 mb-4">
         <StatCard label="Paid users" value={data.subscriptions.paid} icon="⭐" delay={40} />
         <StatCard label="Trial users" value={data.subscriptions.trial} icon="🎁" delay={80} />
-        <StatCard label="Aaj navin users" value={data.users.new_today} icon="🆕" delay={120} />
-        <StatCard label="Aajche jobs" value={data.jobs.today} icon="💼" delay={160} />
-        <StatCard label="Sent aaj" value={data.deliveries.sent_today} icon="📤" delay={200} />
+        <StatCard label="New users today" value={data.users.new_today} icon="🆕" delay={120} />
+        <StatCard label="Jobs added today" value={data.jobs.today} icon="💼" delay={160} />
+        <StatCard label="Jobs sent today" value={data.deliveries.sent_today} icon="📤" delay={200} />
         <StatCard
           label="Click rate"
           value={data.deliveries.ctr_today * 100}
@@ -106,7 +106,7 @@ export default function DashboardScreen() {
           className="mx-4 mb-4 rounded-2xl bg-brand/40 border border-brand p-4"
         >
           <Text className="text-brand-ink font-semibold">
-            ⚠️ {data.subscriptions.expiring_3_days} subscriptions 3 divsat sampnar
+            ⚠️ {data.subscriptions.expiring_3_days} subscriptions expire in the next 3 days
           </Text>
           <Text className="text-brand-ink/70 text-xs mt-0.5">Tap to see users</Text>
         </Pressable>
@@ -131,7 +131,7 @@ export default function DashboardScreen() {
         <Text className="text-base font-bold text-ink mb-3">Quick actions</Text>
         <View className="flex-row flex-wrap gap-3">
           <View className="flex-1 min-w-[45%]">
-            <Button label="➕ Job add" variant="brand" onPress={() => router.push("/jobs/new")} />
+            <Button label="➕ Add job" variant="brand" onPress={() => router.push("/jobs/new")} />
           </View>
           <View className="flex-1 min-w-[45%]">
             <Button label="📣 Broadcast" variant="ghost" onPress={() => router.push("/broadcast")} />

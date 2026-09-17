@@ -73,22 +73,22 @@ const NewStaffSheet = forwardRef<BottomSheetModal, { renderBackdrop: (props: any
 
     const submit = async () => {
       if (!name.trim()) {
-        show("Naav bhara", "warn");
+        show("Enter a name", "warn");
         return;
       }
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
-        show("Valid email bhara", "warn");
+        show("Enter a valid email", "warn");
         return;
       }
       if (password.length < 8) {
-        show("Password 8+ akshari asava", "warn");
+        show("Password must be at least 8 characters", "warn");
         return;
       }
       setLoading(true);
       try {
         await createStaff({ name: name.trim(), email: email.trim().toLowerCase(), password, role: "uploader" });
         queryClient.invalidateQueries({ queryKey: ["staff"] });
-        show("Staff account tayar", "success");
+        show("Staff account created", "success");
         setName("");
         setEmail("");
         setPassword("");

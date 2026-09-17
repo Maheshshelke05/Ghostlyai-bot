@@ -8,6 +8,17 @@ import { ListSkeleton } from "@/components/ui/Skeleton";
 import { useToast } from "@/components/ui/Toast";
 import { apiErrorMessage, getSettings, updateSettings, type SettingsData } from "@/lib/api";
 
+type NumericKey = "price_inr" | "subscription_days" | "trial_days" | "digest_max_jobs" | "max_categories" | "teaser_every_hours";
+
+const NUMBER_FIELDS: { key: NumericKey; label: string }[] = [
+  { key: "price_inr", label: "Price (₹)" },
+  { key: "subscription_days", label: "Subscription length (days)" },
+  { key: "trial_days", label: "Free trial (days)" },
+  { key: "digest_max_jobs", label: "Jobs per digest" },
+  { key: "max_categories", label: "Max categories per student" },
+  { key: "teaser_every_hours", label: "Teaser every (hours)" },
+];
+
 export default function SettingsScreen() {
   const { show } = useToast();
   const queryClient = useQueryClient();
@@ -24,7 +35,7 @@ export default function SettingsScreen() {
     mutationFn: (payload: Partial<SettingsData>) => updateSettings(payload),
     onSuccess: (updated) => {
       queryClient.setQueryData(["settings"], updated);
-      show("Settings save zale", "success");
+      show("Settings saved", "success");
     },
     onError: (err) => show(apiErrorMessage(err), "error"),
   });
@@ -41,13 +52,15 @@ export default function SettingsScreen() {
     setForm((f) => (f ? { ...f, [key]: value } : f));
 
   const validationError = (f: SettingsData): string | null => {
-    if (f.price_inr <= 0) return "Price 0 pekshaa jaast asava";
-    if (f.subscription_days <= 0) return "Subscription divas 0 pekshaa jaast asave";
-    if (f.trial_days < 0) return "Trial divas negative nasave";
-    if (f.digest_max_jobs <= 0 || f.digest_max_jobs > 50) return "Jobs per digest 1-50 madhe asave";
-    if (f.max_categories <= 0 || f.max_categories > 10) return "Max categories 1-10 madhe asave";
-    if (f.teaser_every_hours <= 0) return "Teaser hours 0 pekshaa jaast asave";
-    if (f.digest_times.length === 0) return "Kimaan ek digest time add kara";
+    const empty = NUMBER_FIELDS.find(({ key }) => Number.isNaN(f[key]));
+    if (empty) return `Enter a value for "${empty.label}"`;
+    if (f.price_inr <= 0) return "Price must be greater than 0";
+    if (f.subscription_days <= 0) return "Subscription length must be greater than 0";
+    if (f.trial_days < 0) return "Free trial days cannot be negative";
+    if (f.digest_max_jobs <= 0 || f.digest_max_jobs > 50) return "Jobs per digest must be between 1 and 50";
+    if (f.max_categories <= 0 || f.max_categories > 10) return "Max categories must be between 1 and 10";
+    if (f.teaser_every_hours <= 0) return "Teaser hours must be greater than 0";
+    if (f.digest_times.length === 0) return "Add at least one digest time";
     return null;
   };
 
@@ -72,40 +85,16 @@ export default function SettingsScreen() {
   return (
     <View className="flex-1 bg-background">
       <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 120 }}>
-        <NumberField label="Price (₹)" value={form.price_inr} onChange={(v) => set("price_inr", v)} />
-        <NumberField
-          label="Subscription divas"
-          value={form.subscription_days}
-          onChange={(v) => set("subscription_days", v)}
-        />
-        <NumberField label="Trial divas" value={form.trial_days} onChange={(v) => set("trial_days", v)} />
-        <NumberField
-          label="Jobs per digest"
-          value={form.digest_max_jobs}
-          onChange={(v) => set("digest_max_jobs", v)}
-        />
-        <NumberField
-          label="Max categories per student"
-          value={form.max_categories}
-          onChange={(v) => set("max_categories", v)}
-        />
-        <NumberField
-          label="Teaser every (hours)"
-          value={form.teaser_every_hours}
-          onChange={(v) => set("teaser_every_hours", v)}
-        />
+        {NUMBER_FIELDS.map(({ key, label }) => (
+          <NumberField key={key} label={label} value={form[key]} onChange={(v) => set(key, v)} />
+        ))}
 
         <Text className="text-sm font-semibold text-muted mb-1.5 mt-3">Digest times (IST)</Text>
         <View className="flex-row flex-wrap items-center mb-2">
           {form.digest_times.map((time) => (
             <Pressable
               key={time}
-              onPress={() =>
-                set(
-                  "digest_times",
-                  form.digest_times.filter((t) => t !== time)
-                )
-              }
+              onPress={() => set("digest_times", form.digest_times.filter((t) => t !== time))}
               className="bg-brand rounded-full px-4 py-2 mr-2 mb-2"
             >
               <Text className="text-brand-ink text-sm font-semibold">{time} ✕</Text>
@@ -136,6 +125,8 @@ export default function SettingsScreen() {
   );
 }
 
+// An empty box is held as NaN rather than coerced to 0, so clearing the field to type a new
+// number doesn't instantly snap back to "0"; save() refuses to submit while one is empty.
 function NumberField({
   label,
   value,
@@ -149,12 +140,14 @@ function NumberField({
     <View className="mb-3">
       <Text className="text-sm font-semibold text-muted mb-1.5">{label}</Text>
       <TextInput
-        value={String(value)}
-        onChangeText={(t) => {
-          const n = parseInt(t.replace(/[^0-9]/g, ""), 10);
-          onChange(Number.isNaN(n) ? 0 : n);
+        value={Number.isNaN(value) ? "" : String(value)}
+        onChangeText={(text) => {
+          const digits = text.replace(/[^0-9]/g, "");
+          onChange(digits === "" ? Number.NaN : parseInt(digits, 10));
         }}
         keyboardType="number-pad"
+        placeholder="Enter a number"
+        placeholderTextColor="#9AA39B"
         className="bg-surface border border-line rounded-2xl px-4 py-3.5 text-ink"
       />
     </View>

@@ -27,7 +27,7 @@ export function OfflineBanner() {
           style={{ top: insets.top, zIndex: 200 }}
         >
           <Text className="text-white text-xs font-semibold">
-            📡 Internet nahi. Kahi features kaam karnar nahit.
+            📡 You're offline. Some features won't work.
           </Text>
         </MotiView>
       ) : null}

@@ -27,13 +27,13 @@ export function AiPasteTab() {
     try {
       const drafts = await aiParseJobs(text.slice(0, MAX_CHARS));
       if (drafts.length === 0) {
-        show("Kontihi job sapadli nahi. Text tapasun parat try kara.", "warn");
+        show("No jobs found in that text. Check it and try again.", "warn");
         return;
       }
       setDrafts(drafts);
       router.push("/jobs/ai-review");
     } catch (err) {
-      show(apiErrorMessage(err, "AI parsing fail zali"), "error");
+      show(apiErrorMessage(err, "AI couldn't read that text"), "error");
     } finally {
       setLoading(false);
     }
@@ -42,7 +42,7 @@ export function AiPasteTab() {
   return (
     <View className="p-4 flex-1">
       <View className="flex-row justify-between items-center mb-2">
-        <Text className="text-sm font-semibold text-muted">WhatsApp / website text paste kara</Text>
+        <Text className="text-sm font-semibold text-muted">Paste job text from WhatsApp or a website</Text>
         <Pressable onPress={pasteFromClipboard}>
           <Text className="text-info text-sm font-semibold">📋 Paste</Text>
         </Pressable>
@@ -52,7 +52,7 @@ export function AiPasteTab() {
         value={text}
         onChangeText={(t) => setText(t.slice(0, MAX_CHARS))}
         multiline
-        placeholder="WhatsApp / website varcha job text ithe paste kara"
+        placeholder="Paste the job post text here"
         className="bg-surface border border-line rounded-2xl px-4 py-3.5 text-ink flex-1"
         style={{ textAlignVertical: "top", minHeight: 220 }}
       />
@@ -61,13 +61,13 @@ export function AiPasteTab() {
       </Text>
 
       <View className="mt-4">
-        <Button label="🤖 Jobs kadha" onPress={extract} loading={loading} variant="brand" disabled={!text.trim()} />
+        <Button label="🤖 Extract jobs" onPress={extract} loading={loading} variant="brand" disabled={!text.trim()} />
       </View>
 
       {loading ? (
         <View className="items-center mt-6">
           <ActivityIndicator />
-          <Text className="text-muted text-sm mt-2">AI jobs shodhtoy...</Text>
+          <Text className="text-muted text-sm mt-2">AI is finding jobs...</Text>
         </View>
       ) : null}
     </View>
