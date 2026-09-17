@@ -39,6 +39,12 @@
       "expo-secure-store",
       "expo-sharing",
       "@react-native-community/datetimepicker",
+      [
+        "expo-notifications",
+        {
+          "color": "#EA580C"
+        }
+      ],
       "./plugins/withReleaseSigning.js"
     ],
     "extra": {

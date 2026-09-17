@@ -6,7 +6,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.admin.deps import current_admin
-from app.api.admin.schemas import AdminOut, ChangePasswordIn, LoginIn, TokenOut
+from app.api.admin.schemas import AdminOut, ChangePasswordIn, LoginIn, PushTokenIn, TokenOut
 from app.db.models import Admin
 from app.db.session import get_db
 from app.services import ratelimit
@@ -59,5 +59,18 @@ async def change_password(
     if not verify_password(payload.old_password, admin.password_hash):
         raise HTTPException(status_code=400, detail="Old password is incorrect")
     admin.password_hash = hash_password(payload.new_password)
+    await db.flush()
+    return {"ok": True}
+
+
+@router.put("/push-token")
+async def set_push_token(
+    payload: PushTokenIn,
+    admin: Admin = Depends(current_admin),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """Registers (or clears, with an empty token) this admin's device for push notifications -
+    called by the app right after it gets permission and an Expo push token."""
+    admin.expo_push_token = payload.token or None
     await db.flush()
     return {"ok": True}

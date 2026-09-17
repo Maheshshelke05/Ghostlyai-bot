@@ -15,6 +15,7 @@ import { AnimatedSplash } from "@/components/AnimatedSplash";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { GlobalAlerts } from "@/components/GlobalAlerts";
 import { OfflineBanner } from "@/components/OfflineBanner";
+import { PushRegistration } from "@/components/PushRegistration";
 import { ToastProvider } from "@/components/ui/Toast";
 import { UpdateBanner } from "@/components/UpdateBanner";
 import { WorkspaceSwitchOverlay } from "@/components/WorkspaceSwitchOverlay";
@@ -65,6 +66,7 @@ export default function RootLayout() {
                 <OfflineBanner />
                 {token ? <GlobalAlerts /> : null}
                 {token ? <UpdateBanner /> : null}
+                {token ? <PushRegistration /> : null}
                 <WorkspaceSwitchOverlay />
                 <Stack
                   screenOptions={{

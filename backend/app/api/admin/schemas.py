@@ -33,6 +33,11 @@ class ChangePasswordIn(BaseModel):
     new_password: str = Field(min_length=8)
 
 
+class PushTokenIn(BaseModel):
+    # None/empty clears the token (e.g. the admin turned notifications off in Settings).
+    token: Optional[str] = Field(default=None, max_length=200)
+
+
 # ---------------------------------------------------------------------------
 # Jobs
 # ---------------------------------------------------------------------------

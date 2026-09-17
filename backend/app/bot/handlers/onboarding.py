@@ -31,6 +31,7 @@ from app.services import ai, storage
 from app.services.access import start_trial
 from app.services.districts import canonical_district
 from app.services.notifier import send_digest_to_user
+from app.services.push import send_push_to_admins
 from app.services.validators import normalize_name, normalize_phone, valid_name
 
 logger = logging.getLogger("app.bot.onboarding")
@@ -607,5 +608,9 @@ async def _finish_onboarding(
         sent = await send_digest_to_user(db, message.bot, user, limit=10)
         if sent == 0:
             await message.answer(t(lang, "no_jobs_now"))
+
+        await send_push_to_admins(
+            db, "New student signed up", user.full_name or "A student", {"type": "new_user"}
+        )
     else:
         await message.answer(t(lang, "profile_done_no_trial"))

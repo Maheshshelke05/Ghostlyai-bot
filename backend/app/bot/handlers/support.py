@@ -13,6 +13,7 @@ from app.bot.keyboards import support_kb
 from app.bot.states import Support
 from app.bot.texts import t
 from app.db.models import SupportMessage, User
+from app.services.push import send_push_to_admins
 
 logger = logging.getLogger("app.bot.support")
 router = Router(name="support")
@@ -59,6 +60,11 @@ async def on_support_text(message: Message, state: FSMContext, db: AsyncSession,
     await db.flush()
     await state.clear()
     await message.answer(t(lang, "support_sent"))
+
+    preview = text if len(text) <= 120 else text[:117] + "..."
+    await send_push_to_admins(
+        db, f"New support message — {user.full_name or 'a student'}", preview, {"type": "support"}
+    )
 
 
 @router.message(Support.message)

@@ -25,8 +25,26 @@ KNOWN_SETTINGS: dict[str, Any] = {
 
 async def get_all_settings(db: AsyncSession) -> dict[str, Any]:
     rows = (await db.execute(select(AppSetting))).scalars().all()
-    values = {row.key: row.value for row in rows}
+    # Keys starting with "_" are internal state (e.g. the GhostlyAI poll baseline) stored in
+    # this same table for convenience - never part of the admin-facing settings surface.
+    values = {row.key: row.value for row in rows if not row.key.startswith("_")}
     return {**KNOWN_SETTINGS, **values}
+
+
+async def get_internal_state(db: AsyncSession, key: str, default: Any = None) -> Any:
+    """Like get_setting, but for `_`-prefixed internal keys that update_settings() will never
+    write and get_all_settings() will never expose."""
+    row = (await db.execute(select(AppSetting).where(AppSetting.key == key))).scalar_one_or_none()
+    return row.value if row is not None else default
+
+
+async def set_internal_state(db: AsyncSession, key: str, value: Any) -> None:
+    row = (await db.execute(select(AppSetting).where(AppSetting.key == key))).scalar_one_or_none()
+    if row is None:
+        db.add(AppSetting(key=key, value=value))
+    else:
+        row.value = value
+    await db.flush()
 
 
 async def get_setting(db: AsyncSession, key: str, default: Any = None) -> Any:

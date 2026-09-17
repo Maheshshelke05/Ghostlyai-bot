@@ -196,6 +196,9 @@ class Admin(Base):
     password_hash: Mapped[str] = mapped_column(String(128), nullable=False)
     role: Mapped[str] = mapped_column(String(20), nullable=False, default="owner")  # owner|uploader
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    # One Expo push token per admin (single-device assumption - matches how the app is actually
+    # used today). Set via PUT /admin/auth/push-token when the app registers for notifications.
+    expo_push_token: Mapped[str | None] = mapped_column(String(200), nullable=True)
     created_at: Mapped[datetime] = mapped_column(TZDateTime, nullable=False, default=utcnow)
 
 

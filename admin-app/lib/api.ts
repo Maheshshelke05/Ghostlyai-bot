@@ -262,6 +262,11 @@ export async function changePassword(oldPassword: string, newPassword: string) {
   });
 }
 
+/** Registers (or clears, with null) this device's Expo push token against the logged-in admin. */
+export async function setPushToken(token: string | null) {
+  await apiClient.put("/admin/auth/push-token", { token });
+}
+
 // ---------------------------------------------------------------------------
 // Dashboard / meta
 // ---------------------------------------------------------------------------
