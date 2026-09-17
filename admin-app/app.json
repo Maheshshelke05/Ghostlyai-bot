@@ -13,6 +13,7 @@
     },
     "android": {
       "package": "com.jobalertbot.admin",
+      "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         "backgroundColor": "#EA580C",
         "foregroundImage": "./assets/android-icon-foreground.png",

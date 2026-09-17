@@ -39,3 +39,6 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# Firebase config for push notifications - decoded from a GitHub secret during CI, never committed
+/google-services.json
