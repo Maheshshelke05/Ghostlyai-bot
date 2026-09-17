@@ -169,6 +169,10 @@ class GhostlyUserPlanIn(BaseModel):
     plan: Optional[str] = None  # e.g. "pro" | "free"
     days: Optional[int] = Field(default=None, gt=0, le=3650)
     blocked: Optional[bool] = None
+    # Their write contract isn't confirmed (only read shapes were verified live, where access
+    # is a "status" string, not a boolean) - sent alongside `blocked` so whichever field the
+    # Lambda actually reads takes effect. Harmless if it's ignored.
+    status: Optional[str] = None
 
     @field_validator("plan")
     @classmethod

@@ -103,3 +103,27 @@ export const isPlainObject = (value: unknown): value is AnyRecord =>
 /** Keys we never want in a generic "everything else" dump because they're already shown
  * front-and-centre by the screen, or are internal/noisy. */
 export const COMMON_HIDDEN_KEYS = ["id", "_id", "uid", "user_id", "ticket_id"];
+
+/** Announcement bodies come back as HTML (`<p>...</p>`); strips tags for a plain-text list
+ * preview. Not used for the compose form - that still sends/shows the raw text as typed. */
+export function stripHtml(html: string): string {
+  return html
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/** The live API has no dedicated boolean "blocked" field — access is controlled by a
+ * `status` string (confirmed values seen so far: "active"). This checks an explicit
+ * blocked/is_blocked boolean first (in case that's ever added), then falls back to reading
+ * status for anything that reads as blocked/suspended/banned/disabled. */
+export function isBlockedUser(user: AnyRecord | null | undefined): boolean {
+  const explicit = firstOfBool(user, ["blocked", "is_blocked"]);
+  if (explicit !== undefined) return explicit;
+  const status = firstOfString(user, ["status"], "active").toLowerCase();
+  return /block|suspend|ban|disable/.test(status);
+}

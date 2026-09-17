@@ -52,19 +52,28 @@ export default function GhostlyDashboard() {
   }).length;
 
   const s = stats.data ?? {};
-  const totalUsers = firstOfNumber(s, ["total_users", "users_total", "total"]);
-  const proUsers = firstOfNumber(s, ["pro_users", "paid_users", "pro_count"]);
-  const blockedUsers = firstOfNumber(s, ["blocked_users", "blocked_count"]);
+  // Confirmed field names from the live API (camelCase): totalUsers, proUsers, freeUsers,
+  // blockedUsers, newUsersToday, newUsersThisWeek, activeToday, totalPlatformHours. The
+  // snake_case candidates stay as a fallback in case the API ever changes shape.
+  const totalUsers = firstOfNumber(s, ["totalUsers", "total_users", "users_total", "total"]);
+  const proUsers = firstOfNumber(s, ["proUsers", "pro_users", "paid_users", "pro_count"]);
+  const blockedUsers = firstOfNumber(s, ["blockedUsers", "blocked_users", "blocked_count"]);
+  const activeToday = firstOfNumber(s, ["activeToday", "active_today"]);
 
   const knownStatKeys = [
+    "totalUsers",
     "total_users",
     "users_total",
     "total",
+    "proUsers",
     "pro_users",
     "paid_users",
     "pro_count",
+    "blockedUsers",
     "blocked_users",
     "blocked_count",
+    "activeToday",
+    "active_today",
   ];
   const restOfStats = Object.fromEntries(Object.entries(s).filter(([k]) => !knownStatKeys.includes(k)));
 
@@ -119,6 +128,7 @@ export default function GhostlyDashboard() {
             />
             <StatCard label="Pro users" value={proUsers} icon="⭐" delay={40} />
             <StatCard label="Blocked" value={blockedUsers} icon="🚫" delay={60} />
+            <StatCard label="Active today" value={activeToday} icon="⚡" delay={70} />
           </View>
 
           <View className="px-4 mb-1 flex-row">

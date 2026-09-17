@@ -48,7 +48,7 @@ export async function listGhostlyUsers(params: { search?: string; filter?: strin
 
 export async function updateGhostlyUserPlan(
   userId: string,
-  payload: { plan?: string; days?: number; blocked?: boolean }
+  payload: { plan?: string; days?: number; blocked?: boolean; status?: string }
 ): Promise<AnyRecord> {
   const { data } = await apiClient.put<AnyRecord>(`/admin/ghostly/users/${encodeURIComponent(userId)}/plan`, payload);
   return data;

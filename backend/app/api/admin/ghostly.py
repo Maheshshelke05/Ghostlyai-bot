@@ -94,7 +94,9 @@ async def announcements(_admin: Admin = Depends(owner_only)) -> dict:
 async def create_announcement(
     payload: GhostlyAnnouncementIn, _admin: Admin = Depends(owner_only)
 ) -> dict:
-    return await _call(ghostly.create_announcement(payload.model_dump()))
+    # Confirmed live: an announcement's text field is "message", not "body" - GhostlyAnnouncementIn
+    # keeps "body" as our own API's field name (consistent with the rest of this app), mapped here.
+    return await _call(ghostly.create_announcement({"title": payload.title, "message": payload.body}))
 
 
 @router.post("/announcements/{announcement_id}/send")

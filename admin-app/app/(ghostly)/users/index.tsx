@@ -10,7 +10,7 @@ import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { SearchBar } from "@/components/ui/SearchBar";
 import { ListSkeleton } from "@/components/ui/Skeleton";
 import { apiErrorMessage } from "@/lib/api";
-import { firstOfBool, firstOfString, type AnyRecord } from "@/lib/ghostlyFormat";
+import { firstOfString, isBlockedUser, type AnyRecord } from "@/lib/ghostlyFormat";
 import { listGhostlyUsers } from "@/lib/ghostlyApi";
 
 type FilterKey = "all" | "new_today";
@@ -72,7 +72,7 @@ function UserRow({ user }: { user: AnyRecord }) {
   const name = firstOfString(user, ["name", "full_name", "username"], "Unnamed");
   const email = firstOfString(user, ["email", "email_address"]);
   const plan = firstOfString(user, ["plan", "subscription_plan", "tier"], "free");
-  const blocked = firstOfBool(user, ["blocked", "is_blocked"]);
+  const blocked = isBlockedUser(user);
   const isPro = plan.toLowerCase().includes("pro");
 
   return (

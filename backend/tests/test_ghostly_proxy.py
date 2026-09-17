@@ -197,7 +197,8 @@ async def test_announcement_create_and_send(client, owner_token, monkeypatch):
     calls = []
 
     def handler(request: httpx.Request) -> httpx.Response:
-        calls.append((request.method, request.url.path))
+        body = json.loads(request.content) if request.content else None
+        calls.append((request.method, request.url.path, body))
         if request.method == "POST" and request.url.path.endswith("/announcements"):
             return httpx.Response(200, json={"id": "ann1", "title": "Diwali offer"})
         return httpx.Response(200, json={"sent_to": 500})
@@ -218,7 +219,8 @@ async def test_announcement_create_and_send(client, owner_token, monkeypatch):
     )
     assert resp.status_code == 200, resp.text
     assert resp.json() == {"sent_to": 500}
-    assert calls[-1] == ("POST", "/prod/admin/announcements/ann1/send")
+    assert calls[0] == ("POST", "/prod/admin/announcements", {"title": "Diwali offer", "message": "50% off"})
+    assert calls[-1][:2] == ("POST", "/prod/admin/announcements/ann1/send")
 
 
 # ---------------------------------------------------------------------------

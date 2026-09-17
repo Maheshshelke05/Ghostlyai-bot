@@ -12,10 +12,15 @@ import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { ListSkeleton } from "@/components/ui/Skeleton";
 import { useToast } from "@/components/ui/Toast";
 import { apiErrorMessage } from "@/lib/api";
-import { firstOfBool, firstOfNumber, firstOfString, type AnyRecord } from "@/lib/ghostlyFormat";
+import { firstOfBool, firstOfNumber, firstOfString, stripHtml, type AnyRecord } from "@/lib/ghostlyFormat";
 import { createGhostlyAnnouncement, listGhostlyAnnouncements, sendGhostlyAnnouncement } from "@/lib/ghostlyApi";
 
 function isSent(a: AnyRecord): boolean {
+  // Confirmed live shape: {message, sent_at, sent_count, id, target, title} - no status/sent
+  // field, so a present sent_at is the real signal. status/sent stay as a fallback in case a
+  // draft (not-yet-sent) announcement has a different shape than the sent ones seen so far.
+  const sentAt = firstOfString(a, ["sent_at", "sentAt"]);
+  if (sentAt) return true;
   const status = firstOfString(a, ["status"], "").toLowerCase();
   if (status) return status === "sent" || status === "completed";
   return firstOfBool(a, ["sent"]) ?? false;
@@ -120,7 +125,7 @@ export default function GhostlyAnnouncementsScreen() {
                   </View>
                 </View>
                 <Text className="text-[14px] text-muted mb-2" numberOfLines={3}>
-                  {firstOfString(a, ["body"], "")}
+                  {stripHtml(firstOfString(a, ["message", "body"], ""))}
                 </Text>
                 {sent && sentTo >= 0 ? <Text className="text-[12px] text-muted mb-2">Sent to {sentTo} users</Text> : null}
                 {!sent ? (

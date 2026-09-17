@@ -25,8 +25,10 @@ export default function GhostlyMoreScreen() {
   const emailStats = useQuery({ queryKey: ["ghostly-email-stats"], queryFn: getGhostlyEmailStats });
   const config = useQuery({ queryKey: ["ghostly-config"], queryFn: getGhostlyConfig });
 
-  const aiKey = firstOfKey(config.data, ["ai_auto_reply", "auto_reply", "ai_autoreply"]);
-  const aiEnabled = firstOfBool(config.data, ["ai_auto_reply", "auto_reply", "ai_autoreply"]) ?? false;
+  // Confirmed live: GET /admin/config returns {"id":"global","ai_auto_reply_enabled":true}.
+  const AI_KEY_CANDIDATES = ["ai_auto_reply_enabled", "ai_auto_reply", "auto_reply", "ai_autoreply"];
+  const aiKey = firstOfKey(config.data, AI_KEY_CANDIDATES);
+  const aiEnabled = firstOfBool(config.data, AI_KEY_CANDIDATES) ?? false;
 
   const toggleAi = useMutation({
     mutationFn: (value: boolean) => updateGhostlyConfig({ [aiKey]: value }),
@@ -37,12 +39,17 @@ export default function GhostlyMoreScreen() {
     onError: (err) => show(apiErrorMessage(err), "error"),
   });
 
+  // Confirmed live shape: {totalSent, todaySent, byType, trackableSent, opened, clicked,
+  // openRate, clickRate, recentLogs}. Older snake_case guesses stay as a fallback.
   const e = emailStats.data ?? {};
-  const totalSent = firstOfNumber(e, ["total_sent", "sent_total", "total"]);
-  const sentToday = firstOfNumber(e, ["sent_today", "today_sent"]);
+  const totalSent = firstOfNumber(e, ["totalSent", "total_sent", "sent_total", "total"]);
+  const sentToday = firstOfNumber(e, ["todaySent", "sent_today", "today_sent"]);
   const opened = firstOfNumber(e, ["opened", "opens", "open_count"]);
   const clicked = firstOfNumber(e, ["clicked", "clicks", "click_count"]);
-  const knownEmailKeys = ["total_sent", "sent_total", "total", "sent_today", "today_sent", "opened", "opens", "open_count", "clicked", "clicks", "click_count"];
+  const knownEmailKeys = [
+    "totalSent", "total_sent", "sent_total", "total", "todaySent", "sent_today", "today_sent",
+    "opened", "opens", "open_count", "clicked", "clicks", "click_count", "recentLogs",
+  ];
   const restEmail = Object.fromEntries(Object.entries(e).filter(([k]) => !knownEmailKeys.includes(k)));
 
   const refreshing = emailStats.isFetching || config.isFetching;

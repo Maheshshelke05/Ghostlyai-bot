@@ -11,7 +11,7 @@ import { ConfirmSheet } from "@/components/ui/ConfirmSheet";
 import { KeyValueList } from "@/components/ui/KeyValueList";
 import { useToast } from "@/components/ui/Toast";
 import { apiErrorMessage } from "@/lib/api";
-import { COMMON_HIDDEN_KEYS, firstOfBool, firstOfString, type AnyRecord } from "@/lib/ghostlyFormat";
+import { COMMON_HIDDEN_KEYS, firstOfString, isBlockedUser, type AnyRecord } from "@/lib/ghostlyFormat";
 import { updateGhostlyUserPlan } from "@/lib/ghostlyApi";
 
 export default function GhostlyUserDetailScreen() {
@@ -31,7 +31,7 @@ export default function GhostlyUserDetailScreen() {
     return p.includes("pro") ? "pro" : "free";
   });
   const [days, setDays] = useState("30");
-  const [blocked, setBlocked] = useState(() => firstOfBool(user, ["blocked", "is_blocked"]) ?? false);
+  const [blocked, setBlocked] = useState(() => isBlockedUser(user));
 
   const blockSheetRef = useRef<BottomSheetModal>(null);
   const planSheetRef = useRef<BottomSheetModal>(null);
@@ -47,7 +47,10 @@ export default function GhostlyUserDetailScreen() {
   };
 
   const blockMutation = useMutation({
-    mutationFn: () => updateGhostlyUserPlan(id, { blocked: !blocked }),
+    // The exact field the write endpoint reads isn't confirmed (only read shapes were verified
+    // live), so both a "blocked" boolean and a "status" string are sent - whichever the Lambda
+    // actually checks, this covers it, and an extra unused field is harmless.
+    mutationFn: () => updateGhostlyUserPlan(id, { blocked: !blocked, status: blocked ? "active" : "blocked" }),
     onSuccess: () => {
       setBlocked((b) => !b);
       invalidate();
