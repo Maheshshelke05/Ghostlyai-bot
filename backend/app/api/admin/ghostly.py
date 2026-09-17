@@ -7,6 +7,8 @@ class as our own support inbox.
 """
 from __future__ import annotations
 
+from typing import Any
+
 from fastapi import APIRouter, Depends, HTTPException
 
 from app.api.admin.deps import owner_only
@@ -33,7 +35,7 @@ async def _call(coro):
 
 
 @router.get("/stats")
-async def stats(_admin: Admin = Depends(owner_only)) -> dict:
+async def stats(_admin: Admin = Depends(owner_only)) -> Any:
     return await _call(ghostly.get_stats())
 
 
@@ -42,14 +44,14 @@ async def users(
     search: str | None = None,
     filter: str | None = None,
     _admin: Admin = Depends(owner_only),
-) -> dict:
+) -> Any:
     return await _call(ghostly.list_users(search=search, filter=filter))
 
 
 @router.put("/users/{user_id}/plan")
 async def update_user_plan(
     user_id: str, payload: GhostlyUserPlanIn, _admin: Admin = Depends(owner_only)
-) -> dict:
+) -> Any:
     body = payload.model_dump(exclude_none=True)
     if not body:
         raise HTTPException(status_code=400, detail="Nothing to update")
@@ -57,59 +59,59 @@ async def update_user_plan(
 
 
 @router.get("/support")
-async def support(_admin: Admin = Depends(owner_only)) -> dict:
+async def support(_admin: Admin = Depends(owner_only)) -> Any:
     return await _call(ghostly.list_support())
 
 
 @router.post("/support/{ticket_id}/reply")
 async def support_reply(
     ticket_id: str, payload: GhostlySupportReplyIn, _admin: Admin = Depends(owner_only)
-) -> dict:
+) -> Any:
     return await _call(ghostly.reply_support(ticket_id, payload.model_dump()))
 
 
 @router.put("/support/{ticket_id}")
 async def support_update(
     ticket_id: str, payload: GhostlySupportUpdateIn, _admin: Admin = Depends(owner_only)
-) -> dict:
+) -> Any:
     return await _call(ghostly.update_support(ticket_id, payload.model_dump()))
 
 
 @router.get("/email-stats")
-async def email_stats(_admin: Admin = Depends(owner_only)) -> dict:
+async def email_stats(_admin: Admin = Depends(owner_only)) -> Any:
     return await _call(ghostly.get_email_stats())
 
 
 @router.post("/send-email")
-async def send_email(payload: GhostlySendEmailIn, _admin: Admin = Depends(owner_only)) -> dict:
+async def send_email(payload: GhostlySendEmailIn, _admin: Admin = Depends(owner_only)) -> Any:
     return await _call(ghostly.send_email(payload.model_dump()))
 
 
 @router.get("/announcements")
-async def announcements(_admin: Admin = Depends(owner_only)) -> dict:
+async def announcements(_admin: Admin = Depends(owner_only)) -> Any:
     return await _call(ghostly.list_announcements())
 
 
 @router.post("/announcements")
 async def create_announcement(
     payload: GhostlyAnnouncementIn, _admin: Admin = Depends(owner_only)
-) -> dict:
+) -> Any:
     # Confirmed live: an announcement's text field is "message", not "body" - GhostlyAnnouncementIn
     # keeps "body" as our own API's field name (consistent with the rest of this app), mapped here.
     return await _call(ghostly.create_announcement({"title": payload.title, "message": payload.body}))
 
 
 @router.post("/announcements/{announcement_id}/send")
-async def send_announcement(announcement_id: str, _admin: Admin = Depends(owner_only)) -> dict:
+async def send_announcement(announcement_id: str, _admin: Admin = Depends(owner_only)) -> Any:
     return await _call(ghostly.send_announcement(announcement_id))
 
 
 @router.get("/config")
-async def config(_admin: Admin = Depends(owner_only)) -> dict:
+async def config(_admin: Admin = Depends(owner_only)) -> Any:
     return await _call(ghostly.get_config())
 
 
 @router.put("/config")
-async def update_config(payload: GhostlyConfigIn, _admin: Admin = Depends(owner_only)) -> dict:
+async def update_config(payload: GhostlyConfigIn, _admin: Admin = Depends(owner_only)) -> Any:
     patch = payload.model_dump(exclude_none=True)
     return await _call(ghostly.update_config(patch))

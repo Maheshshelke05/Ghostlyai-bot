@@ -166,6 +166,27 @@ async def test_send_email_validates_and_forwards(client, owner_token, monkeypatc
     assert bad.status_code == 422
 
 
+async def test_support_and_announcements_pass_through_bare_lists(client, owner_token, monkeypatch):
+    """Regression test: GhostlyAI's /admin/support and /admin/announcements return a bare
+    JSON array, not a dict. Route handlers once declared `-> dict`, which made FastAPI's
+    implicit response-model validation reject any list with a 500 - this pins the fix."""
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path.endswith("/support"):
+            return httpx.Response(200, json=[{"id": "t1", "subject": "Help", "status": "open"}])
+        return httpx.Response(200, json=[{"id": "a1", "title": "Update", "message": "Hi", "sent_at": "2026-01-01"}])
+
+    monkeypatch.setattr(ghostly.httpx, "AsyncClient", _mock_client(handler))
+
+    resp = await client.get("/admin/ghostly/support", headers={"Authorization": f"Bearer {owner_token}"})
+    assert resp.status_code == 200, resp.text
+    assert resp.json() == [{"id": "t1", "subject": "Help", "status": "open"}]
+
+    resp = await client.get("/admin/ghostly/announcements", headers={"Authorization": f"Bearer {owner_token}"})
+    assert resp.status_code == 200, resp.text
+    assert resp.json()[0]["title"] == "Update"
+
+
 async def test_support_reply_and_status_update(client, owner_token, monkeypatch):
     calls = []
 
