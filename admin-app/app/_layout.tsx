@@ -13,8 +13,11 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { AnimatedSplash } from "@/components/AnimatedSplash";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { GlobalAlerts } from "@/components/GlobalAlerts";
 import { OfflineBanner } from "@/components/OfflineBanner";
 import { ToastProvider } from "@/components/ui/Toast";
+import { UpdateBanner } from "@/components/UpdateBanner";
+import { WorkspaceSwitchOverlay } from "@/components/WorkspaceSwitchOverlay";
 import { installCrashHandler } from "@/lib/crashHandler";
 import { queryClient } from "@/lib/query-client";
 import { useAppModeStore } from "@/store/appMode";
@@ -60,6 +63,9 @@ export default function RootLayout() {
             <BottomSheetModalProvider>
               <ToastProvider>
                 <OfflineBanner />
+                {token ? <GlobalAlerts /> : null}
+                {token ? <UpdateBanner /> : null}
+                <WorkspaceSwitchOverlay />
                 <Stack
                   screenOptions={{
                     headerShown: false,

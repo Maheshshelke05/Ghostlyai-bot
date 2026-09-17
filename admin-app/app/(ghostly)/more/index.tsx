@@ -18,7 +18,7 @@ export default function GhostlyMoreScreen() {
   const insets = useSafeAreaInsets();
   const { show } = useToast();
   const queryClient = useQueryClient();
-  const setMode = useAppModeStore((s) => s.setMode);
+  const beginSwitch = useAppModeStore((s) => s.beginSwitch);
   const logout = useAuthStore((s) => s.logout);
   const admin = useAuthStore((s) => s.admin);
 
@@ -113,14 +113,7 @@ export default function GhostlyMoreScreen() {
         </Card>
 
         <Card className="mb-3">
-          <Button
-            label="🏠 Switch to Job Alert Bot"
-            variant="ghost"
-            onPress={() => {
-              setMode("jobalert");
-              show("Switched to Job Alert Bot", "success");
-            }}
-          />
+          <Button label="🏠 Switch to Job Alert Bot" variant="ghost" onPress={() => beginSwitch("jobalert")} />
         </Card>
 
         <Card>

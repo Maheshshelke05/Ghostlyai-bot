@@ -7,7 +7,6 @@ import { Card } from "@/components/ui/Card";
 import { KeyValueList } from "@/components/ui/KeyValueList";
 import { ListSkeleton } from "@/components/ui/Skeleton";
 import { StatCard } from "@/components/ui/StatCard";
-import { useToast } from "@/components/ui/Toast";
 import { apiErrorMessage } from "@/lib/api";
 import { firstOfNumber } from "@/lib/ghostlyFormat";
 import { getGhostlyStats, listGhostlySupport, listGhostlyUsers } from "@/lib/ghostlyApi";
@@ -15,8 +14,7 @@ import { useAppModeStore } from "@/store/appMode";
 
 export default function GhostlyDashboard() {
   const insets = useSafeAreaInsets();
-  const { show } = useToast();
-  const setMode = useAppModeStore((s) => s.setMode);
+  const beginSwitch = useAppModeStore((s) => s.beginSwitch);
 
   const stats = useQuery({
     queryKey: ["ghostly-stats"],
@@ -89,10 +87,7 @@ export default function GhostlyDashboard() {
           <Text className="text-[15px] text-muted mt-0.5">Sister app · admin data</Text>
         </View>
         <Text
-          onPress={() => {
-            setMode("jobalert");
-            show("Switched to Job Alert Bot", "success");
-          }}
+          onPress={() => beginSwitch("jobalert")}
           className="text-brand text-[13px] font-semibold bg-brand-soft rounded-full px-3 py-2"
         >
           🏠 Job Alert Bot

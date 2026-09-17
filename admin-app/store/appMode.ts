@@ -13,7 +13,14 @@ const secureStorage: StateStorage = {
 interface AppModeState {
   mode: AppMode;
   hydrated: boolean;
+  /** Non-null while the branded switch-workspace overlay is showing; the target it's headed to. */
+  switchingTo: AppMode | null;
   setMode: (mode: AppMode) => void;
+  /** Shows the full-screen transition, then flips `mode` once it finishes (see
+   * WorkspaceSwitchOverlay). This is what every "switch workspace" button should call instead
+   * of setMode directly, so the transition is consistent everywhere it's triggered from. */
+  beginSwitch: (mode: AppMode) => void;
+  endSwitch: () => void;
   setHydrated: () => void;
 }
 
@@ -21,10 +28,20 @@ interface AppModeState {
  * one (Settings > Switch to GhotlyAI.in). Persisted so the app reopens into the same mode. */
 export const useAppModeStore = create<AppModeState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       mode: "jobalert",
       hydrated: false,
+      switchingTo: null,
       setMode: (mode) => set({ mode }),
+      beginSwitch: (mode) => {
+        if (get().mode === mode || get().switchingTo) return;
+        set({ switchingTo: mode });
+      },
+      endSwitch: () => {
+        const target = get().switchingTo;
+        if (!target) return;
+        set({ mode: target, switchingTo: null });
+      },
       setHydrated: () => set({ hydrated: true }),
     }),
     {

@@ -19,6 +19,9 @@ jobs:
         working-directory: admin-app
     env:
       EXPO_PUBLIC_API_URL: https://api.ghotlyai.in
+      # Baked into the JS bundle so the running app can compare itself against the latest
+      # GitHub release tag (admin-app-v<version>-<run_number>) for the in-app update check.
+      EXPO_PUBLIC_BUILD_NUMBER: ${{ github.run_number }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4

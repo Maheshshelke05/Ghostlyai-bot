@@ -32,7 +32,7 @@ const NUMBER_FIELDS: { key: NumericKey; label: string }[] = [
 export default function SettingsScreen() {
   const { show } = useToast();
   const queryClient = useQueryClient();
-  const setAppMode = useAppModeStore((s) => s.setMode);
+  const beginSwitch = useAppModeStore((s) => s.beginSwitch);
   const { data, isLoading } = useQuery({ queryKey: ["settings"], queryFn: getSettings });
 
   const [form, setForm] = useState<SettingsData | null>(null);
@@ -103,14 +103,7 @@ export default function SettingsScreen() {
             Switch this app to show GhostlyAI.in's admin data instead — users, support tickets,
             email stats and announcements for that product. Come back here anytime to switch back.
           </Text>
-          <Button
-            label="👻 Switch to GhotlyAI.in"
-            variant="brand"
-            onPress={() => {
-              setAppMode("ghostly");
-              show("Switched to GhostlyAI.in", "success");
-            }}
-          />
+          <Button label="👻 Switch to GhotlyAI.in" variant="brand" onPress={() => beginSwitch("ghostly")} />
         </Card>
 
         {NUMBER_FIELDS.map(({ key, label }) => (

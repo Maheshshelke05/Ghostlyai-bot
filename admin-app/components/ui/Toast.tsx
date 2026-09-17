@@ -31,16 +31,40 @@ const KIND_TEXT: Record<ToastKind, string> = {
 
 export function ToastProvider({ children }: { children: React.ReactNode }) {
   const [toast, setToast] = useState<ToastMessage | null>(null);
+  // Two events (e.g. a new signup and a new support message) can land in the same poll tick -
+  // a queue means the second one still gets its own moment on screen instead of being silently
+  // overwritten by the first show() call. `active` is a ref (not state) so show() can check
+  // "is something on screen right now" synchronously, with no state-batching surprises.
+  const queue = useRef<ToastMessage[]>([]);
+  const active = useRef(false);
   const nextId = useRef(0);
   const insets = useSafeAreaInsets();
 
-  const show = useCallback((text: string, kind: ToastKind = "success") => {
-    const id = ++nextId.current;
-    setToast({ id, text, kind });
-    setTimeout(() => {
-      setToast((current) => (current?.id === id ? null : current));
-    }, 2500);
+  const advance = useCallback(() => {
+    const next = queue.current.shift();
+    if (next) {
+      active.current = true;
+      setToast(next);
+      setTimeout(advance, 2500);
+    } else {
+      active.current = false;
+      setToast(null);
+    }
   }, []);
+
+  const show = useCallback(
+    (text: string, kind: ToastKind = "success") => {
+      const message = { id: ++nextId.current, text, kind };
+      if (active.current) {
+        queue.current.push(message);
+        return;
+      }
+      active.current = true;
+      setToast(message);
+      setTimeout(advance, 2500);
+    },
+    [advance]
+  );
 
   return (
     <ToastContext.Provider value={{ show }}>
