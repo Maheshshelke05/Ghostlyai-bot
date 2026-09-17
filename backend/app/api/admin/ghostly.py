@@ -67,7 +67,12 @@ async def support(_admin: Admin = Depends(owner_only)) -> Any:
 async def support_reply(
     ticket_id: str, payload: GhostlySupportReplyIn, _admin: Admin = Depends(owner_only)
 ) -> Any:
-    return await _call(ghostly.reply_support(ticket_id, payload.model_dump()))
+    # Confirmed live: the reply endpoint wants "message", not "text" (error was literally
+    # {"success": false, "error": "Missing 'message'"}) - same field-naming convention as
+    # announcements. GhostlySupportReplyIn keeps "text" as our own API's name for consistency.
+    return await _call(
+        ghostly.reply_support(ticket_id, {"message": payload.text, "resolve": payload.resolve})
+    )
 
 
 @router.put("/support/{ticket_id}")

@@ -5,14 +5,15 @@ The mobile app never sees `GHOSTLY_API_KEY` — every call is proxied through ou
 `/admin/ghostly/*` routes (owner-only), which use this module to talk to the upstream API.
 That keeps the key server-side and reuses our own JWT auth for the app.
 
-The upstream auth header name isn't confirmed yet (their custom authorizer rejects the usual
-`x-api-key` / `Authorization: Bearer` guesses), so it's read from `GHOSTLY_API_AUTH_HEADER`
-(default "x-api-key") rather than hardcoded — flip one env var once the real header is known.
+The upstream auth header is a custom one checked directly in their Lambda code, not a
+standard AWS authorizer: `x-admin-secret` (confirmed with their developer). It's read from
+`GHOSTLY_API_AUTH_HEADER` rather than hardcoded, in case it's ever rotated to something else.
 """
 from __future__ import annotations
 
 import logging
 from typing import Any
+from urllib.parse import quote
 
 import httpx
 
@@ -123,7 +124,7 @@ async def get_config() -> Any:
 # Mutating
 # ---------------------------------------------------------------------------
 async def update_user_plan(user_id: str, payload: dict[str, Any]) -> Any:
-    return await _request("PUT", f"/admin/users/{user_id}/plan", json=payload)
+    return await _request("PUT", f"/admin/users/{quote(user_id, safe='')}/plan", json=payload)
 
 
 async def send_email(payload: dict[str, Any]) -> Any:
@@ -135,15 +136,20 @@ async def create_announcement(payload: dict[str, Any]) -> Any:
 
 
 async def send_announcement(announcement_id: str) -> Any:
-    return await _request("POST", f"/admin/announcements/{announcement_id}/send")
+    return await _request("POST", f"/admin/announcements/{quote(announcement_id, safe='')}/send")
 
 
 async def reply_support(ticket_id: str, payload: dict[str, Any]) -> Any:
-    return await _request("POST", f"/admin/support/{ticket_id}/reply", json=payload)
+    # Ticket ids look like "107501432674953932232#2026-09-17" - the raw "#" makes httpx treat
+    # everything after it (including "/reply") as a URL fragment and silently drop it from the
+    # actual request, so this MUST be quoted rather than embedded raw. (Confirmed live: the
+    # unquoted version resolved to POST /admin/support/107501432674953932232 with no /reply at
+    # all - this is why replying from the app was silently failing.)
+    return await _request("POST", f"/admin/support/{quote(ticket_id, safe='')}/reply", json=payload)
 
 
 async def update_support(ticket_id: str, payload: dict[str, Any]) -> Any:
-    return await _request("PUT", f"/admin/support/{ticket_id}", json=payload)
+    return await _request("PUT", f"/admin/support/{quote(ticket_id, safe='')}", json=payload)
 
 
 async def update_config(patch: dict[str, Any]) -> Any:

@@ -3,6 +3,7 @@ and upstream-failure handling — all against a fake transport, no real network 
 from __future__ import annotations
 
 import json
+from urllib.parse import quote
 
 import httpx
 import pytest
@@ -210,8 +211,31 @@ async def test_support_reply_and_status_update(client, owner_token, monkeypatch)
     )
     assert resp.status_code == 200, resp.text
 
-    assert calls[0] == ("POST", "/prod/admin/support/t1/reply", {"text": "We're on it", "resolve": True})
+    assert calls[0] == ("POST", "/prod/admin/support/t1/reply", {"message": "We're on it", "resolve": True})
     assert calls[1] == ("PUT", "/prod/admin/support/t1", {"status": "reopened"})
+
+
+async def test_support_reply_with_hash_in_ticket_id(client, owner_token, monkeypatch):
+    """Regression test: real ticket ids look like "<user_id>#<date>" (confirmed live). An
+    unquoted "#" makes httpx treat it (and everything after it, including "/reply") as a URL
+    fragment and silently drop it from the actual request - this is why replying from the app
+    was failing. The path the mock server receives must contain the FULL id and end in /reply."""
+    ticket_id = "107501432674953932232#2026-09-17"
+    seen_paths = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen_paths.append(request.url.path)
+        return httpx.Response(200, json={"ok": True})
+
+    monkeypatch.setattr(ghostly.httpx, "AsyncClient", _mock_client(handler))
+
+    resp = await client.post(
+        f"/admin/ghostly/support/{quote(ticket_id, safe='')}/reply",
+        json={"text": "Thanks for the report", "resolve": True},
+        headers={"Authorization": f"Bearer {owner_token}"},
+    )
+    assert resp.status_code == 200, resp.text
+    assert seen_paths == [f"/prod/admin/support/{ticket_id}/reply"]
 
 
 async def test_announcement_create_and_send(client, owner_token, monkeypatch):

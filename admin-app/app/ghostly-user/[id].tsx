@@ -14,6 +14,12 @@ import { apiErrorMessage } from "@/lib/api";
 import { COMMON_HIDDEN_KEYS, firstOfString, isBlockedUser, type AnyRecord } from "@/lib/ghostlyFormat";
 import { updateGhostlyUserPlan } from "@/lib/ghostlyApi";
 
+// Block/unblock is deliberately NOT wired up here: live-tested against the real API and the
+// endpoint returns {"success": true} without actually changing the user's status either way -
+// the field name this write endpoint expects for blocking isn't "blocked" or "status" (both
+// were tried). Shipping it would show a confident "User blocked" toast that lied. Plan change
+// below IS confirmed working (verified live: plan flips and persists).
+
 export default function GhostlyUserDetailScreen() {
   const { id, data } = useLocalSearchParams<{ id: string; data?: string }>();
   const queryClient = useQueryClient();
@@ -31,9 +37,8 @@ export default function GhostlyUserDetailScreen() {
     return p.includes("pro") ? "pro" : "free";
   });
   const [days, setDays] = useState("30");
-  const [blocked, setBlocked] = useState(() => isBlockedUser(user));
+  const blocked = isBlockedUser(user); // read-only badge below - see the note above on why
 
-  const blockSheetRef = useRef<BottomSheetModal>(null);
   const planSheetRef = useRef<BottomSheetModal>(null);
 
   const name = firstOfString(user, ["name", "full_name", "username"], "Unnamed user");
@@ -45,19 +50,6 @@ export default function GhostlyUserDetailScreen() {
     queryClient.invalidateQueries({ queryKey: ["ghostly-users"] });
     queryClient.invalidateQueries({ queryKey: ["ghostly-stats"] });
   };
-
-  const blockMutation = useMutation({
-    // The exact field the write endpoint reads isn't confirmed (only read shapes were verified
-    // live), so both a "blocked" boolean and a "status" string are sent - whichever the Lambda
-    // actually checks, this covers it, and an extra unused field is harmless.
-    mutationFn: () => updateGhostlyUserPlan(id, { blocked: !blocked, status: blocked ? "active" : "blocked" }),
-    onSuccess: () => {
-      setBlocked((b) => !b);
-      invalidate();
-      show(blocked ? "User unblocked" : "User blocked", "success");
-    },
-    onError: (err) => show(apiErrorMessage(err), "error"),
-  });
 
   const planMutation = useMutation({
     mutationFn: () => {
@@ -98,7 +90,7 @@ export default function GhostlyUserDetailScreen() {
           </View>
           {planChoice === "pro" ? (
             <View className="mb-2">
-              <Text className="text-sm font-semibold text-muted mb-1.5">Days</Text>
+              <Text className="text-sm font-semibold text-muted mb-1.5">Days (sent to the API; not confirmed to limit the duration)</Text>
               <TextInput
                 value={days}
                 onChangeText={(t) => setDays(t.replace(/[^0-9]/g, ""))}
@@ -108,20 +100,10 @@ export default function GhostlyUserDetailScreen() {
             </View>
           ) : null}
           <Button
-            label={planChoice === "pro" ? `Make Pro for ${days || "30"} days` : "Move to Free"}
+            label={planChoice === "pro" ? "Make Pro" : "Move to Free"}
             variant="brand"
             onPress={() => planSheetRef.current?.present()}
             loading={planMutation.isPending}
-          />
-        </Card>
-
-        <Card className="mb-3">
-          <Text className="text-[13px] font-semibold text-muted mb-2 uppercase tracking-wide">Access</Text>
-          <Button
-            label={blocked ? "Unblock user" : "Block user"}
-            variant={blocked ? "brand" : "danger"}
-            onPress={() => blockSheetRef.current?.present()}
-            loading={blockMutation.isPending}
           />
         </Card>
 
@@ -139,20 +121,8 @@ export default function GhostlyUserDetailScreen() {
       </ScrollView>
 
       <ConfirmSheet
-        ref={blockSheetRef}
-        title={blocked ? "Unblock this user?" : "Block this user?"}
-        message={blocked ? "They will regain access to the app." : "They will lose access to the app immediately."}
-        confirmLabel={blocked ? "Unblock" : "Block"}
-        danger={!blocked}
-        onConfirm={() => {
-          blockSheetRef.current?.dismiss();
-          blockMutation.mutate();
-        }}
-      />
-
-      <ConfirmSheet
         ref={planSheetRef}
-        title={planChoice === "pro" ? `Make Pro for ${days || "30"} days?` : "Move this user to Free?"}
+        title={planChoice === "pro" ? "Make this user Pro?" : "Move this user to Free?"}
         message={name}
         confirmLabel="Confirm"
         danger={false}
