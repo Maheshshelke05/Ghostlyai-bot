@@ -66,11 +66,15 @@ jobs:
 
       # The prebuilt gradle.properties caps the JVM at 2 GiB, which is enough for most builds
       # but D8 dex merging hit OutOfMemoryError once. Runners have 7 GiB, so give Gradle 4.
-      - name: Raise Gradle JVM memory
+      # It also builds x86/x86_64 native libs, which only emulators use; real phones are ARM.
+      # Dropping them takes the APK from ~104 MB to ~60 MB, so it uploads and installs faster.
+      - name: Tune Gradle build (heap, ARM-only ABIs)
         run: |
           sed -i 's/^org.gradle.jvmargs=.*/org.gradle.jvmargs=-Xmx4096m -XX:MaxMetaspaceSize=1024m -XX:+HeapDumpOnOutOfMemoryError/' android/gradle.properties
           grep -q '^org.gradle.jvmargs=' android/gradle.properties || echo 'org.gradle.jvmargs=-Xmx4096m -XX:MaxMetaspaceSize=1024m' >> android/gradle.properties
-          grep '^org.gradle.jvmargs=' android/gradle.properties
+          sed -i 's/^reactNativeArchitectures=.*/reactNativeArchitectures=armeabi-v7a,arm64-v8a/' android/gradle.properties
+          grep -q '^reactNativeArchitectures=' android/gradle.properties || echo 'reactNativeArchitectures=armeabi-v7a,arm64-v8a' >> android/gradle.properties
+          grep -E '^(org.gradle.jvmargs|reactNativeArchitectures)=' android/gradle.properties
 
       - name: Build Android Release APK
         working-directory: admin-app/android
