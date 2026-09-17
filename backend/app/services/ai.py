@@ -182,10 +182,9 @@ async def parse_resume(
         from google.genai import types
 
         contents = [prompt, types.Part.from_bytes(data=data, mime_type=mime)]
-    elif mime in (
-        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        "application/msword",
-    ):
+    # Legacy binary .doc (application/msword) is deliberately not accepted: python-docx only
+    # reads the zipped-XML .docx format. The bot rejects .doc uploads before they get here.
+    elif mime == "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
         try:
             text = await _to_thread(_read_docx_text, data)
         except Exception:  # noqa: BLE001

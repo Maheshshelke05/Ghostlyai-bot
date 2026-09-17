@@ -92,18 +92,29 @@ def parse_tracking_token(token: str) -> int | None:
 
 
 async def safe_send(bot: Bot, chat_id: int, text: str, markup=None) -> str:
-    """Returns "ok" | "blocked" | "error"."""
+    """Returns "ok" | "blocked" | "error".
+
+    The bot's default parse mode is HTML, and admin-written text (broadcasts, direct
+    messages) may intentionally use tags like <b> - but it may also contain a bare "&" or
+    "<" ("TCS & Infosys"), which Telegram rejects with "can't parse entities". Rather than
+    escaping everything (which would break intended formatting), retry once as plain text.
+    """
+    plain = False
     for attempt in range(_MAX_RETRIES):
         try:
+            kwargs = {"parse_mode": None} if plain else {}
             await bot.send_message(
-                chat_id, text, reply_markup=markup, disable_web_page_preview=True
+                chat_id, text, reply_markup=markup, disable_web_page_preview=True, **kwargs
             )
             return "ok"
         except TelegramRetryAfter as exc:
             await asyncio.sleep(exc.retry_after + 1)
         except TelegramForbiddenError:
             return "blocked"
-        except TelegramBadRequest:
+        except TelegramBadRequest as exc:
+            if not plain and "parse entities" in str(exc).lower():
+                plain = True
+                continue
             logger.warning("Telegram BadRequest sending to %s", chat_id, exc_info=True)
             return "error"
         except Exception:  # noqa: BLE001

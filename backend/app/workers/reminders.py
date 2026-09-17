@@ -11,7 +11,7 @@ from app.bot.loader import get_bot
 from app.bot.texts import t
 from app.db.models import User, utcnow
 from app.db.session import session_scope
-from app.services.access import get_setting, in_trial, subscription_end
+from app.services.access import format_date_ist, get_setting, in_trial, subscription_end
 from app.services.alerts import send_admin_alert
 from app.services.notifier import safe_send
 from app.services.payments import PaymentError, get_or_create_payment_link
@@ -58,7 +58,7 @@ async def _send_paid_reminders() -> None:
                 if not payment.short_url:
                     continue
 
-                text = t(lang, "reminder_expiring", until=end.astimezone().strftime("%d-%m-%Y"))
+                text = t(lang, "reminder_expiring", until=format_date_ist(end))
                 result = await safe_send(bot, user.telegram_id, text, renew_kb(lang, price, payment.short_url))
                 if result == "blocked":
                     user.status = "bot_blocked"
@@ -100,7 +100,7 @@ async def _send_trial_reminders() -> None:
             if not payment.short_url:
                 continue
 
-            text = t(lang, "reminder_expiring", until=user.trial_ends_at.astimezone().strftime("%d-%m-%Y"))
+            text = t(lang, "reminder_expiring", until=format_date_ist(user.trial_ends_at))
             result = await safe_send(bot, user.telegram_id, text, renew_kb(lang, price, payment.short_url))
             if result == "blocked":
                 user.status = "bot_blocked"

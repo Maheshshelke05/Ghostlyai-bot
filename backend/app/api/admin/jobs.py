@@ -42,6 +42,7 @@ def _job_out(job: Job, sent_count: int = 0, click_count: int = 0) -> dict:
         "qualification": job.qualification, "district": job.district,
         "location_text": job.location_text, "job_type": job.job_type, "salary": job.salary,
         "apply_link": job.apply_link, "last_date": job.last_date.isoformat() if job.last_date else None,
+        "description": job.description,
         "status": job.status, "created_at": job.created_at.isoformat(),
         "sent_count": sent_count, "click_count": click_count,
     }
@@ -196,29 +197,49 @@ async def batch_create(
     payload: BatchJobsIn, db: AsyncSession = Depends(get_db), admin: Admin = Depends(current_admin)
 ) -> dict:
     categories = await _categories_map(db)
-    created = 0
-    duplicates = 0
+    rows = []
     errors: list[dict] = []
-
     for index, job_in in enumerate(payload.jobs):
         try:
-            kwargs = validate_job_row(job_in.model_dump(), categories)
+            rows.append(validate_job_row(job_in.model_dump(), categories))
         except ValueError as exc:
             errors.append({"index": index, "error": str(exc)})
-            continue
 
-        existing = (
-            await db.execute(select(Job.id).where(Job.fingerprint == kwargs["fingerprint"]))
-        ).scalar_one_or_none()
+    created, duplicates = await _insert_new_jobs(db, admin, rows)
+    return {"created": created, "duplicates": duplicates, "errors": errors}
+
+
+async def _insert_new_jobs(db: AsyncSession, admin: Admin, rows: list[dict]) -> tuple[int, int]:
+    """Adds rows whose fingerprint isn't already in the DB *or earlier in this same batch*.
+
+    The session runs with autoflush off, so a pending (unflushed) row is invisible to the
+    per-row existence query - two identical rows in one upload used to both get added and
+    blow up the whole request on the unique constraint at flush time.
+    """
+    seen: set[str] = set()
+    created = duplicates = 0
+    for kwargs in rows:
+        fp = kwargs["fingerprint"]
+        if fp in seen:
+            duplicates += 1
+            continue
+        seen.add(fp)
+        existing = (await db.execute(select(Job.id).where(Job.fingerprint == fp))).scalar_one_or_none()
         if existing is not None:
             duplicates += 1
             continue
-
         db.add(Job(admin_id=admin.id, **kwargs))
         created += 1
 
-    await db.flush()
-    return {"created": created, "duplicates": duplicates, "errors": errors}
+    try:
+        await db.flush()
+    except IntegrityError:
+        # another upload inserted one of these between our check and the flush
+        await db.rollback()
+        raise HTTPException(
+            status_code=409, detail="Some of these jobs were added at the same time by another upload. Please retry."
+        )
+    return created, duplicates
 
 
 @router.post("/bulk")
@@ -235,28 +256,15 @@ async def bulk_upload(
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
     categories = await _categories_map(db)
-    created = 0
-    duplicates = 0
+    valid = []
     errors: list[dict] = []
-
     for row_number, raw_row in rows:
         try:
-            kwargs = validate_job_row(raw_row, categories)
+            valid.append(validate_job_row(raw_row, categories))
         except ValueError as exc:
             errors.append({"row": row_number, "error": str(exc)})
-            continue
 
-        existing = (
-            await db.execute(select(Job.id).where(Job.fingerprint == kwargs["fingerprint"]))
-        ).scalar_one_or_none()
-        if existing is not None:
-            duplicates += 1
-            continue
-
-        db.add(Job(admin_id=admin.id, **kwargs))
-        created += 1
-
-    await db.flush()
+    created, duplicates = await _insert_new_jobs(db, admin, valid)
     return {"created": created, "duplicates": duplicates, "errors": errors}
 
 

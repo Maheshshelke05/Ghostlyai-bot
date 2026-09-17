@@ -6,10 +6,31 @@ from typing import Any, Awaitable, Callable
 from aiogram import BaseMiddleware
 from aiogram.types import CallbackQuery, Message, TelegramObject, Update
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.bot.texts import t
 from app.db.models import User
 from app.db.session import session_scope
+from app.services.access import reactivate_if_bot_blocked
+
+
+async def _get_or_create_user(db: AsyncSession, telegram_id: int, username: str | None) -> User:
+    """Webhook updates are processed concurrently, so a brand-new user tapping twice fast can
+    have two tasks both miss the lookup and both insert. The insert runs in a savepoint: the
+    loser hits the telegram_id unique constraint, rolls back just the savepoint, and re-reads
+    the row the winner created."""
+    stmt = select(User).where(User.telegram_id == telegram_id)
+    user = (await db.execute(stmt)).scalar_one_or_none()
+    if user is not None:
+        return user
+    try:
+        async with db.begin_nested():
+            user = User(telegram_id=telegram_id, username=username, status="onboarding")
+            db.add(user)
+    except IntegrityError:
+        user = (await db.execute(stmt)).scalar_one()
+    return user
 
 
 class DbUserMiddleware(BaseMiddleware):
@@ -39,23 +60,10 @@ class DbUserMiddleware(BaseMiddleware):
             return None
 
         async with session_scope() as db:
-            user = (
-                await db.execute(select(User).where(User.telegram_id == from_user.id))
-            ).scalar_one_or_none()
-
-            if user is None:
-                user = User(
-                    telegram_id=from_user.id,
-                    username=from_user.username,
-                    status="onboarding",
-                )
-                db.add(user)
-                await db.flush()
-            else:
-                if user.username != from_user.username:
-                    user.username = from_user.username
-                if user.status == "bot_blocked":
-                    user.status = "active" if user.category_links else "onboarding"
+            user = await _get_or_create_user(db, from_user.id, from_user.username)
+            if user.username != from_user.username:
+                user.username = from_user.username
+            reactivate_if_bot_blocked(user)
 
             if user.status == "blocked":
                 lang = user.language or "mr"

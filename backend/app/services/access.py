@@ -4,7 +4,8 @@ from __future__ import annotations
 from datetime import datetime, timedelta
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import and_, or_, select
+from sqlalchemy import func as sa_func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models import AppSetting, Subscription, User, utcnow
@@ -84,6 +85,44 @@ def access_until(user: User, now: datetime | None = None) -> datetime | None:
     return paid_end or user.trial_ends_at
 
 
+# --- SQL equivalents of the rules above, for filtering/counting in the database instead of
+# loading every user into memory. They must stay in step with the Python versions.
+def _paid_end_sql():
+    return (
+        select(sa_func.max(Subscription.end_at))
+        .where(Subscription.user_id == User.id)
+        .correlate(User)
+        .scalar_subquery()
+    )
+
+
+def paid_sql(now: datetime):
+    return _paid_end_sql() > now
+
+
+def not_paid_sql(now: datetime):
+    paid_end = _paid_end_sql()
+    return or_(paid_end.is_(None), paid_end <= now)
+
+
+def access_label_sql(label: str, now: datetime):
+    """WHERE clause for the admin list's access label: "paid" | "trial" | "none"."""
+    if label == "paid":
+        return paid_sql(now)
+    if label == "trial":
+        return and_(not_paid_sql(now), User.trial_ends_at > now)
+    return and_(not_paid_sql(now), or_(User.trial_ends_at.is_(None), User.trial_ends_at <= now))
+
+
+def access_until_between_sql(now: datetime, cutoff: datetime):
+    """access_until() falls in (now, cutoff]: the paid end if paid access is live, else the trial end."""
+    paid_end = _paid_end_sql()
+    return or_(
+        and_(paid_end > now, paid_end <= cutoff),
+        and_(not_paid_sql(now), User.trial_ends_at > now, User.trial_ends_at <= cutoff),
+    )
+
+
 async def start_trial(db: AsyncSession, user: User, trial_days: int | None = None) -> None:
     """Starts the free trial exactly once per user."""
     if user.trial_ends_at is not None:
@@ -116,15 +155,24 @@ def status_line(user: User, lang: str, now: datetime | None = None) -> str:
     now = now or utcnow()
     if has_paid_access(user, now):
         end = subscription_end(user)
-        return t(lang, "status_active", until=_fmt(end))
+        return t(lang, "status_active", until=format_date_ist(end))
     if in_trial(user, now):
-        return t(lang, "status_trial", until=_fmt(user.trial_ends_at))
+        return t(lang, "status_trial", until=format_date_ist(user.trial_ends_at))
     return t(lang, "status_none")
 
 
-def _fmt(dt: datetime | None) -> str:
+def format_date_ist(dt: datetime | None) -> str:
+    """User-facing DD-MM-YYYY in IST. Never format a stored (UTC) datetime directly: an end
+    time just after IST midnight is still the previous day in UTC."""
     if dt is None:
         return "-"
     from app.config import settings
 
     return dt.astimezone(settings.tz).strftime("%d-%m-%Y")
+
+
+def reactivate_if_bot_blocked(user: User) -> None:
+    """A bot_blocked flag is cleared as soon as we know the user is reachable again. Never
+    touches admin bans ("blocked") and never marks an unfinished profile active."""
+    if user.status == "bot_blocked":
+        user.status = "active" if user.category_links else "onboarding"

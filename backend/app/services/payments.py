@@ -15,7 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
 from app.db.models import Payment, Subscription, User, utcnow
-from app.services.access import extend_subscription, get_setting
+from app.services.access import extend_subscription, get_setting, reactivate_if_bot_blocked
 
 logger = logging.getLogger("app.payments")
 
@@ -144,6 +144,10 @@ async def mark_link_paid(
     sub: Subscription = await extend_subscription(
         db, user, int(subscription_days), source="payment"
     )
+    # A renewal can be paid from a reminder's link without ever messaging the bot, so the
+    # middleware never gets the chance to clear a stale bot_blocked flag - and the digest
+    # worker only serves active users.
+    reactivate_if_bot_blocked(user)
 
     payment.status = "paid"
     payment.razorpay_payment_id = payment_id

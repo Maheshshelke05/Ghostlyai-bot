@@ -7,7 +7,7 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import FileResponse, RedirectResponse
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.admin.deps import owner_only
@@ -16,7 +16,16 @@ from app.bot.loader import get_bot
 from app.bot.texts import t
 from app.db.models import JobDelivery, Payment, User, utcnow
 from app.db.session import get_db
-from app.services.access import access_until, extend_subscription, has_paid_access, in_trial
+from app.services.access import (
+    access_label_sql,
+    access_until,
+    access_until_between_sql,
+    extend_subscription,
+    format_date_ist,
+    has_paid_access,
+    in_trial,
+    reactivate_if_bot_blocked,
+)
 from app.services.notifier import safe_send
 from app.services.storage import delete_resume, get_resume_url
 
@@ -68,18 +77,19 @@ async def list_users(
     if district:
         stmt = stmt.where(User.district == district)
 
-    users = (await db.execute(stmt.order_by(User.created_at.desc()))).scalars().all()
-
+    # filter, count and paginate in the database - never pull every user into memory
     now = utcnow()
     if access:
-        users = [u for u in users if _access_label(u, now) == access]
+        stmt = stmt.where(access_label_sql(access, now))
     if expiring:
-        cutoff = now + timedelta(days=expiring)
-        users = [u for u in users if (until := access_until(u, now)) and now < until <= cutoff]
+        stmt = stmt.where(access_until_between_sql(now, now + timedelta(days=expiring)))
 
-    total = len(users)
-    start = (page - 1) * size
-    page_users = users[start:start + size]
+    page = max(page, 1)
+    size = max(1, min(size, 100))
+    total = (await db.execute(select(func.count()).select_from(stmt.subquery()))).scalar_one()
+    page_users = (
+        await db.execute(stmt.order_by(User.created_at.desc()).offset((page - 1) * size).limit(size))
+    ).scalars().all()
     return {"items": [_user_row(u) for u in page_users], "total": total, "page": page, "size": size}
 
 
@@ -101,9 +111,15 @@ async def get_user(user_id: int, db: AsyncSession = Depends(get_db), _admin=Depe
     ).scalars().all()
 
     sent_total = (
-        await db.execute(select(JobDelivery).where(JobDelivery.user_id == user_id))
-    ).scalars().all()
-    clicks_total = sum(1 for d in sent_total if d.clicked_at is not None)
+        await db.execute(select(func.count(JobDelivery.id)).where(JobDelivery.user_id == user_id))
+    ).scalar_one()
+    clicks_total = (
+        await db.execute(
+            select(func.count(JobDelivery.id)).where(
+                JobDelivery.user_id == user_id, JobDelivery.clicked_at.is_not(None)
+            )
+        )
+    ).scalar_one()
 
     return {
         "user": _user_row(user),
@@ -135,7 +151,7 @@ async def get_user(user_id: int, db: AsyncSession = Depends(get_db), _admin=Depe
             }
             for d in deliveries
         ],
-        "stats": {"sent": len(sent_total), "clicks": clicks_total},
+        "stats": {"sent": sent_total, "clicks": clicks_total},
     }
 
 
@@ -148,11 +164,16 @@ async def extend_user(
         raise HTTPException(status_code=404, detail="User not found")
 
     sub = await extend_subscription(db, user, payload.days, source="admin")
+    reactivate_if_bot_blocked(user)
 
     if payload.notify:
         lang = user.language or "mr"
-        until = sub.end_at.strftime("%d-%m-%Y")
-        await safe_send(get_bot(), user.telegram_id, t(lang, "payment_success", until=until))
+        result = await safe_send(
+            get_bot(), user.telegram_id, t(lang, "payment_success", until=format_date_ist(sub.end_at))
+        )
+        if result == "blocked":
+            user.status = "bot_blocked"
+    await db.flush()
 
     return {"access_until": sub.end_at.isoformat()}
 

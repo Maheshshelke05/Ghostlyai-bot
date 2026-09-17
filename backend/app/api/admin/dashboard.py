@@ -1,7 +1,7 @@
 """GET /admin/dashboard (Chapter 17.2)."""
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends
 from sqlalchemy import func, select
@@ -9,9 +9,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.admin.deps import owner_only
 from app.config import settings
-from app.db.models import Job, JobDelivery, Payment, User, utcnow
+from app.db.models import Job, JobDelivery, Payment, Subscription, User, utcnow
 from app.db.session import get_db
-from app.services.access import has_access
+from app.services.access import access_label_sql, paid_sql
 
 router = APIRouter(prefix="/admin", tags=["admin-dashboard"])
 
@@ -45,16 +45,14 @@ async def dashboard(
         await db.execute(select(func.count(User.id)).where(User.created_at >= today_start))
     ).scalar_one()
 
-    active_users = (
-        await db.execute(select(User).where(User.status == "active"))
-    ).scalars().all()
-    paid_count = sum(1 for u in active_users if has_access(u) and _has_paid(u, now))
-    trial_count = sum(1 for u in active_users if has_access(u) and not _has_paid(u, now))
-    expiring_3 = 0
-    for u in active_users:
-        end = _paid_end(u)
-        if end and now < end <= now + timedelta(days=3):
-            expiring_3 += 1
+    async def count_active(*conditions) -> int:
+        stmt = select(func.count(User.id)).where(User.status == "active", *conditions)
+        return (await db.execute(stmt)).scalar_one()
+
+    # counted in the database; previously every active user was loaded into memory
+    paid_count = await count_active(paid_sql(now))
+    trial_count = await count_active(access_label_sql("trial", now))
+    expiring_3 = await count_active(paid_sql(now), _paid_end_before(now + timedelta(days=3)))
 
     revenue_today = (
         await db.execute(
@@ -92,23 +90,36 @@ async def dashboard(
     ).scalar_one()
     ctr_today = round(clicks_today / sent_today, 4) if sent_today else 0.0
 
-    last_7_days = []
-    for i in range(6, -1, -1):
-        d = today_ist - timedelta(days=i)
-        d_start, d_end = _ist_bounds_utc(d)
-        rev = (
-            await db.execute(
-                select(func.coalesce(func.sum(Payment.amount_paise), 0)).where(
-                    Payment.status == "paid", Payment.paid_at >= d_start, Payment.paid_at < d_end
-                )
+    # Two range queries for the whole week, bucketed by IST day in Python - instead of two
+    # queries per day. (Grouping by an IST date in SQL isn't portable across Postgres/SQLite.)
+    week_days = [today_ist - timedelta(days=i) for i in range(6, -1, -1)]
+    week_start, _ = _ist_bounds_utc(week_days[0])
+    revenue_by_day = {d: 0 for d in week_days}
+    signups_by_day = {d: 0 for d in week_days}
+    paid_rows = (
+        await db.execute(
+            select(Payment.paid_at, Payment.amount_paise).where(
+                Payment.status == "paid", Payment.paid_at >= week_start, Payment.paid_at < today_end
             )
-        ).scalar_one()
-        signups = (
-            await db.execute(
-                select(func.count(User.id)).where(User.created_at >= d_start, User.created_at < d_end)
-            )
-        ).scalar_one()
-        last_7_days.append({"date": d.isoformat(), "revenue_inr": rev / 100, "signups": signups})
+        )
+    ).all()
+    for paid_at, amount in paid_rows:
+        day = _as_utc(paid_at).astimezone(settings.tz).date()
+        if day in revenue_by_day:
+            revenue_by_day[day] += amount or 0
+    signup_rows = (
+        await db.execute(
+            select(User.created_at).where(User.created_at >= week_start, User.created_at < today_end)
+        )
+    ).scalars().all()
+    for created_at in signup_rows:
+        day = _as_utc(created_at).astimezone(settings.tz).date()
+        if day in signups_by_day:
+            signups_by_day[day] += 1
+    last_7_days = [
+        {"date": d.isoformat(), "revenue_inr": revenue_by_day[d] / 100, "signups": signups_by_day[d]}
+        for d in week_days
+    ]
 
     return {
         "users": {
@@ -127,12 +138,16 @@ async def dashboard(
     }
 
 
-def _paid_end(user: User):
-    if not user.subscriptions:
-        return None
-    return max(sub.end_at for sub in user.subscriptions)
+def _paid_end_before(cutoff):
+    return (
+        select(func.max(Subscription.end_at))
+        .where(Subscription.user_id == User.id)
+        .correlate(User)
+        .scalar_subquery()
+        <= cutoff
+    )
 
 
-def _has_paid(user: User, now) -> bool:
-    end = _paid_end(user)
-    return end is not None and end > now
+def _as_utc(dt: datetime) -> datetime:
+    # SQLite hands timestamps back naive; Postgres returns them aware
+    return dt if dt.tzinfo is not None else dt.replace(tzinfo=timezone.utc)
