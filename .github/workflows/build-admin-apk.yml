@@ -89,11 +89,31 @@ jobs:
           path: admin-app/${{ steps.apk.outputs.apk_name }}
           retention-days: 90
 
+      # Uploading a ~100 MB asset occasionally fails on GitHub's side ("Error saving asset")
+      # even though the APK built fine; retry once after a pause before failing the run.
       - name: Create or update GitHub Release
+        id: release
+        continue-on-error: true
         uses: softprops/action-gh-release@v2
         with:
           tag_name: admin-app-v${{ steps.apk.outputs.version }}-${{ github.run_number }}
           name: Job Alert Admin v${{ steps.apk.outputs.version }} (build ${{ github.run_number }})
           body: Automated build from commit ${{ github.sha }}.
           files: admin-app/${{ steps.apk.outputs.apk_name }}
+          overwrite_files: true
+          make_latest: true
+
+      - name: Wait before retrying the release upload
+        if: steps.release.outcome == 'failure'
+        run: sleep 30
+
+      - name: Retry GitHub Release upload
+        if: steps.release.outcome == 'failure'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: admin-app-v${{ steps.apk.outputs.version }}-${{ github.run_number }}
+          name: Job Alert Admin v${{ steps.apk.outputs.version }} (build ${{ github.run_number }})
+          body: Automated build from commit ${{ github.sha }}.
+          files: admin-app/${{ steps.apk.outputs.apk_name }}
+          overwrite_files: true
           make_latest: true
