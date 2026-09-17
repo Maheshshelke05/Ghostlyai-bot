@@ -71,6 +71,12 @@ async def lifespan(app: FastAPI):
     if settings.is_production:
         import asyncio
 
+        # A leaked default secret lets anyone mint an owner token; refuse to boot with it.
+        if settings.JWT_SECRET == "dev-secret-change-me" or len(settings.JWT_SECRET) < 32:
+            raise RuntimeError("JWT_SECRET must be set to a random value of at least 32 chars in production")
+        if not settings.TELEGRAM_WEBHOOK_SECRET:
+            logger.warning("TELEGRAM_WEBHOOK_SECRET is empty: the Telegram webhook is not authenticated")
+
         logger.info("Running database migrations...")
         await asyncio.to_thread(_run_migrations)
         logger.info("Migrations up to date")

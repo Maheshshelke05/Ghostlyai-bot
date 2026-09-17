@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.admin.deps import current_admin
+from app.api.admin.deps import owner_only
 from app.api.admin.schemas import MessageIn
 from app.bot.loader import get_bot
 from app.bot.texts import t
@@ -41,7 +41,7 @@ async def list_threads(
     page: int = 1,
     size: int = 30,
     db: AsyncSession = Depends(get_db),
-    _admin=Depends(current_admin),
+    _admin=Depends(owner_only),
 ) -> dict:
     last_in, last_out = _last_at("in"), _last_at("out")
     stmt = select(User).where(last_in.is_not(None))
@@ -91,7 +91,7 @@ async def list_threads(
 
 @router.get("/{user_id}")
 async def get_thread(
-    user_id: int, db: AsyncSession = Depends(get_db), _admin=Depends(current_admin)
+    user_id: int, db: AsyncSession = Depends(get_db), _admin=Depends(owner_only)
 ) -> dict:
     user = await db.get(User, user_id)
     if user is None:
@@ -125,7 +125,7 @@ async def reply(
     user_id: int,
     payload: MessageIn,
     db: AsyncSession = Depends(get_db),
-    admin: Admin = Depends(current_admin),
+    admin: Admin = Depends(owner_only),
 ) -> dict:
     user = await db.get(User, user_id)
     if user is None:
