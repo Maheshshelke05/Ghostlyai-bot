@@ -160,3 +160,43 @@ class StaffIn(BaseModel):
 class StaffUpdate(BaseModel):
     is_active: Optional[bool] = None
     password: Optional[str] = Field(default=None, min_length=8)
+
+
+# ---------------------------------------------------------------------------
+# GhostlyAI.in (sister product, proxied admin API)
+# ---------------------------------------------------------------------------
+class GhostlyUserPlanIn(BaseModel):
+    plan: Optional[str] = None  # e.g. "pro" | "free"
+    days: Optional[int] = Field(default=None, gt=0, le=3650)
+    blocked: Optional[bool] = None
+
+    @field_validator("plan")
+    @classmethod
+    def _norm_plan(cls, value: Optional[str]) -> Optional[str]:
+        return value.strip().lower() if value else value
+
+
+class GhostlySendEmailIn(BaseModel):
+    to: EmailStr
+    subject: str = Field(min_length=1, max_length=300)
+    body: str = Field(min_length=1, max_length=20000)
+
+
+class GhostlySupportReplyIn(BaseModel):
+    text: str = Field(min_length=1, max_length=4000)
+    resolve: bool = False
+
+
+class GhostlySupportUpdateIn(BaseModel):
+    status: str  # e.g. "open" | "resolved" | "reopened"
+
+
+class GhostlyAnnouncementIn(BaseModel):
+    title: str = Field(min_length=1, max_length=200)
+    body: str = Field(min_length=1, max_length=20000)
+
+
+class GhostlyConfigIn(BaseModel):
+    """Partial patch — merged onto the live config server-side before PUT (see ghostly_client)."""
+
+    model_config = {"extra": "allow"}

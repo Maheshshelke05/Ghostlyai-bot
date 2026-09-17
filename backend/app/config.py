@@ -50,6 +50,13 @@ class Settings(BaseSettings):
     # ---------- Cloudinary (resume storage; optional, falls back to local disk) ----------
     CLOUDINARY_URL: str = ""
 
+    # ---------- GhostlyAI.in admin API (sister product, surfaced in the admin app) ----------
+    GHOSTLY_API_BASE_URL: str = ""
+    GHOSTLY_API_KEY: str = ""
+    # Their custom authorizer's header name isn't confirmed yet; change this once it is,
+    # instead of editing code. "Authorization" is auto-prefixed with "Bearer " if used.
+    GHOSTLY_API_AUTH_HEADER: str = "x-api-key"
+
     # ---------- Scheduler ----------
     # When true, the API process itself runs the APScheduler jobs (digest, reminders, expiry,
     # broadcasts) in-process instead of expecting a separate `app.workers.scheduler` process.
