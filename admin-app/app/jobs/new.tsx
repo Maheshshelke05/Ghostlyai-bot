@@ -26,9 +26,10 @@ export default function NewJobScreen() {
     dup_job_type?: string;
     dup_salary?: string;
     dup_description?: string;
+    tab?: string;
   }>();
   const isDuplicate = !!params.dup_title;
-  const [tab, setTab] = useState<TabKey>("form");
+  const [tab, setTab] = useState<TabKey>(params.tab === "excel" || params.tab === "ai" ? params.tab : "form");
   const queryClient = useQueryClient();
 
   const duplicateDefaults: Partial<JobFormData> | undefined = isDuplicate

@@ -28,6 +28,7 @@ export default function MoreScreen() {
     queryKey: ["support", "open", ""],
     queryFn: () => listSupportThreads({ status: "open", page: 1, size: 1 }),
     refetchInterval: 30_000,
+    enabled: isOwner,
   });
   const openCount = openSupport?.total ?? 0;
 
@@ -36,7 +37,7 @@ export default function MoreScreen() {
       <ScreenHeader title="More" subtitle={`${admin?.name ?? ""} · ${admin?.role ?? ""}`} />
 
       <Section title="Students">
-        <MenuRow icon="💬" label="Support inbox" badge={openCount} onPress={() => router.push("/support")} />
+        {isOwner ? <MenuRow icon="💬" label="Support inbox" badge={openCount} onPress={() => router.push("/support")} /> : null}
         {isOwner ? <MenuRow icon="📣" label="Broadcast" onPress={() => router.push("/broadcast")} /> : null}
         <MenuRow icon="📊" label="Delivery report" onPress={() => router.push("/delivery")} last />
       </Section>

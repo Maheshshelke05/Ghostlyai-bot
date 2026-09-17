@@ -12,7 +12,7 @@ import { ListSkeleton } from "@/components/ui/Skeleton";
 import { StatCard } from "@/components/ui/StatCard";
 import { useCountUp } from "@/components/ui/useCountUp";
 import { apiErrorMessage, getDashboard, getDeliveryStats, listSupportThreads } from "@/lib/api";
-import { useAuthStore } from "@/store/auth";
+import { useAuthStore, useIsOwner } from "@/store/auth";
 
 function greeting(): string {
   const h = new Date().getHours();
@@ -23,6 +23,7 @@ function greeting(): string {
 
 export default function DashboardScreen() {
   const admin = useAuthStore((s) => s.admin);
+  const isOwner = useIsOwner();
   const insets = useSafeAreaInsets();
   const { data, isLoading, isError, error, refetch, isRefetching } = useQuery({
     queryKey: ["dashboard"],
@@ -34,6 +35,7 @@ export default function DashboardScreen() {
     queryKey: ["support", "open", ""],
     queryFn: () => listSupportThreads({ status: "open", page: 1, size: 1 }),
     refetchInterval: 30_000,
+    enabled: isOwner, // the inbox holds student phone numbers; the API only serves it to owners
   });
   const { data: delivery, refetch: refetchDelivery } = useQuery({
     queryKey: ["delivery-stats", 7],
@@ -201,12 +203,24 @@ export default function DashboardScreen() {
           <View className="flex-1 min-w-[45%]">
             <Button label="➕ Add job" variant="primary" onPress={() => router.push("/jobs/new")} />
           </View>
-          <View className="flex-1 min-w-[45%]">
-            <Button label="📣 Broadcast" variant="brand" onPress={() => router.push("/broadcast")} />
-          </View>
-          <View className="flex-1 min-w-[45%]">
-            <Button label="💬 Support" variant="brand" onPress={() => router.push("/support")} />
-          </View>
+          {isOwner ? (
+            <View className="flex-1 min-w-[45%]">
+              <Button label="📣 Broadcast" variant="brand" onPress={() => router.push("/broadcast")} />
+            </View>
+          ) : (
+            <View className="flex-1 min-w-[45%]">
+              <Button label="📥 Bulk upload" variant="brand" onPress={() => router.push("/jobs/new?tab=excel")} />
+            </View>
+          )}
+          {isOwner ? (
+            <View className="flex-1 min-w-[45%]">
+              <Button label="💬 Support" variant="brand" onPress={() => router.push("/support")} />
+            </View>
+          ) : (
+            <View className="flex-1 min-w-[45%]">
+              <Button label="🗂 All jobs" variant="brand" onPress={() => router.push("/jobs")} />
+            </View>
+          )}
           <View className="flex-1 min-w-[45%]">
             <Button label="📊 Delivery report" variant="brand" onPress={() => router.push("/delivery")} />
           </View>
