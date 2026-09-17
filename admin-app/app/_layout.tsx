@@ -17,6 +17,7 @@ import { OfflineBanner } from "@/components/OfflineBanner";
 import { ToastProvider } from "@/components/ui/Toast";
 import { installCrashHandler } from "@/lib/crashHandler";
 import { queryClient } from "@/lib/query-client";
+import { useAppModeStore } from "@/store/appMode";
 import { useAuthStore } from "@/store/auth";
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
@@ -31,9 +32,11 @@ export default function RootLayout() {
   });
   const hydrated = useAuthStore((s) => s.hydrated);
   const token = useAuthStore((s) => s.token);
+  const modeHydrated = useAppModeStore((s) => s.hydrated);
+  const mode = useAppModeStore((s) => s.mode);
   const [splashDone, setSplashDone] = useState(false);
 
-  const ready = fontsLoaded && hydrated;
+  const ready = fontsLoaded && hydrated && modeHydrated;
 
   useEffect(() => {
     if (ready) SplashScreen.hideAsync().catch(() => {});
@@ -69,7 +72,7 @@ export default function RootLayout() {
                     contentStyle: { backgroundColor: "#F2F2F7" },
                   }}
                 >
-                  <Stack.Protected guard={!!token}>
+                  <Stack.Protected guard={!!token && mode === "jobalert"}>
                     <Stack.Screen name="(tabs)" />
                     <Stack.Screen name="jobs/new" options={{ presentation: "modal", headerShown: true, title: "Add job" }} />
                     <Stack.Screen name="jobs/[id]" options={{ headerShown: true, title: "Job" }} />
@@ -82,6 +85,12 @@ export default function RootLayout() {
                     <Stack.Screen name="support/index" options={{ headerShown: true, title: "Support inbox" }} />
                     <Stack.Screen name="support/[userId]" options={{ headerShown: true, title: "Conversation" }} />
                     <Stack.Screen name="delivery" options={{ headerShown: true, title: "Delivery report" }} />
+                  </Stack.Protected>
+                  <Stack.Protected guard={!!token && mode === "ghostly"}>
+                    <Stack.Screen name="(ghostly)" />
+                    <Stack.Screen name="ghostly-user/[id]" options={{ headerShown: true, title: "User" }} />
+                    <Stack.Screen name="ghostly-ticket/[id]" options={{ headerShown: true, title: "Ticket" }} />
+                    <Stack.Screen name="ghostly-compose-email" options={{ presentation: "modal", headerShown: true, title: "New email" }} />
                   </Stack.Protected>
                   <Stack.Protected guard={!token}>
                     <Stack.Screen name="(auth)" />

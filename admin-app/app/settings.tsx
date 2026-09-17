@@ -4,9 +4,11 @@ import { useEffect, useState } from "react";
 import { Platform, Pressable, ScrollView, Text, TextInput, View } from "react-native";
 
 import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
 import { ListSkeleton } from "@/components/ui/Skeleton";
 import { useToast } from "@/components/ui/Toast";
 import { apiErrorMessage, getSettings, updateSettings, type SettingsData } from "@/lib/api";
+import { useAppModeStore } from "@/store/appMode";
 
 type NumericKey =
   | "price_inr"
@@ -30,6 +32,7 @@ const NUMBER_FIELDS: { key: NumericKey; label: string }[] = [
 export default function SettingsScreen() {
   const { show } = useToast();
   const queryClient = useQueryClient();
+  const setAppMode = useAppModeStore((s) => s.setMode);
   const { data, isLoading } = useQuery({ queryKey: ["settings"], queryFn: getSettings });
 
   const [form, setForm] = useState<SettingsData | null>(null);
@@ -94,6 +97,22 @@ export default function SettingsScreen() {
   return (
     <View className="flex-1 bg-background">
       <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 120 }}>
+        <Card className="mb-4">
+          <Text className="text-[13px] font-semibold text-muted mb-2 uppercase tracking-wide">Workspace</Text>
+          <Text className="text-[14px] text-muted mb-3">
+            Switch this app to show GhostlyAI.in's admin data instead — users, support tickets,
+            email stats and announcements for that product. Come back here anytime to switch back.
+          </Text>
+          <Button
+            label="👻 Switch to GhotlyAI.in"
+            variant="brand"
+            onPress={() => {
+              setAppMode("ghostly");
+              show("Switched to GhostlyAI.in", "success");
+            }}
+          />
+        </Card>
+
         {NUMBER_FIELDS.map(({ key, label }) => (
           <NumberField key={key} label={label} value={form[key]} onChange={(v) => set(key, v)} />
         ))}
