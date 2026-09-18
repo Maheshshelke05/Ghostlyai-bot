@@ -11,6 +11,7 @@ from app.api.admin.deps import current_admin, owner_only
 from app.api.admin.schemas import CategoryIn, CategoryUpdate
 from app.db.models import Category, Job, JobDelivery, User, UserCategory, utcnow
 from app.db.session import get_db
+from app.services import cache
 from app.services.jobs import job_delay_minutes
 
 router = APIRouter(prefix="/admin/categories", tags=["admin-categories"])
@@ -50,6 +51,12 @@ async def delivery_stats(
     """Per category: jobs added, how many were delivered, and how many students are still
     waiting - i.e. subscribers who have a matching job that hasn't reached them yet."""
     days = max(1, min(days, 90))
+    return await cache.get_or_set(
+        f"admin:delivery-stats:{days}", ttl_seconds=20, compute=lambda: _compute_delivery_stats(db, days)
+    )
+
+
+async def _compute_delivery_stats(db: AsyncSession, days: int) -> dict:
     since = utcnow() - timedelta(days=days)
     delay = await job_delay_minutes(db)
     ready_before = utcnow() - timedelta(minutes=delay)
@@ -86,37 +93,40 @@ async def delivery_stats(
         .where(User.status == "active")
         .group_by(UserCategory.category_id)
     )).all()
+    # Students subscribed to a category who still have an undelivered ready job, grouped in one
+    # query instead of one extra round-trip per category (this used to be O(categories) queries -
+    # 21 categories meant 21 extra sequential round-trips to the database on every dashboard load).
+    waiting_rows = (await db.execute(
+        select(UserCategory.category_id, func.count(func.distinct(UserCategory.user_id)))
+        .select_from(UserCategory)
+        .join(User, User.id == UserCategory.user_id)
+        .join(Job, Job.category_id == UserCategory.category_id)
+        .where(
+            User.status == "active",
+            Job.status == "active",
+            Job.created_at >= since,
+            Job.created_at <= ready_before,
+            ~exists().where(and_(JobDelivery.job_id == Job.id, JobDelivery.user_id == User.id)),
+        )
+        .group_by(UserCategory.category_id)
+    )).all()
 
     jobs_map, pending_map = dict(jobs_rows), dict(pending_rows)
     sent_map, clicked_map, subs_map = dict(sent_rows), dict(clicked_rows), dict(subscribers_rows)
+    waiting_map = dict(waiting_rows)
 
-    items = []
-    for c in categories:
-        # students subscribed to this category who still have an undelivered ready job
-        waiting = (await db.execute(
-            select(func.count(func.distinct(UserCategory.user_id)))
-            .select_from(UserCategory)
-            .join(User, User.id == UserCategory.user_id)
-            .join(Job, Job.category_id == UserCategory.category_id)
-            .where(
-                UserCategory.category_id == c.id,
-                User.status == "active",
-                Job.status == "active",
-                Job.created_at >= since,
-                Job.created_at <= ready_before,
-                ~exists().where(and_(JobDelivery.job_id == Job.id, JobDelivery.user_id == User.id)),
-            )
-        )).scalar_one()
-
-        items.append({
+    items = [
+        {
             "category_id": c.id, "slug": c.slug, "name": c.name, "is_active": c.is_active,
             "jobs": jobs_map.get(c.id, 0),
             "jobs_waiting_to_send": pending_map.get(c.id, 0),
             "subscribers": subs_map.get(c.id, 0),
             "sent": sent_map.get(c.id, 0),
             "clicked": clicked_map.get(c.id, 0),
-            "students_waiting": waiting,
-        })
+            "students_waiting": waiting_map.get(c.id, 0),
+        }
+        for c in categories
+    ]
 
     return {"days": days, "job_delay_minutes": delay, "items": items}
 

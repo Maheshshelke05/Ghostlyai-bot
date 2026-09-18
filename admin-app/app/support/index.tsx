@@ -4,11 +4,13 @@ import { router } from "expo-router";
 import { useState } from "react";
 import { Pressable, Text, View } from "react-native";
 
+import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
 import { Chip } from "@/components/ui/Chip";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { SearchBar } from "@/components/ui/SearchBar";
 import { ListSkeleton } from "@/components/ui/Skeleton";
-import { listSupportThreads, type SupportThread } from "@/lib/api";
+import { apiErrorMessage, listSupportThreads, type SupportThread } from "@/lib/api";
 
 type Filter = "open" | "all";
 
@@ -26,7 +28,7 @@ export default function SupportInboxScreen() {
   const [filter, setFilter] = useState<Filter>("open");
   const [query, setQuery] = useState("");
 
-  const { data, isLoading, refetch, isRefetching, fetchNextPage, hasNextPage, isFetchingNextPage } =
+  const { data, isLoading, isError, error, refetch, isRefetching, fetchNextPage, hasNextPage, isFetchingNextPage } =
     useInfiniteQuery({
       queryKey: ["support", filter, query],
       queryFn: ({ pageParam }) =>
@@ -48,7 +50,16 @@ export default function SupportInboxScreen() {
         </View>
       </View>
 
-      {isLoading ? (
+      {isError ? (
+        <Card className="mx-4 items-center py-6">
+          <Text className="text-muted text-center mb-4">
+            {apiErrorMessage(error, "Couldn't load the support inbox. Check your internet connection.")}
+          </Text>
+          <View className="w-40">
+            <Button label="Retry" onPress={() => refetch()} variant="brand" />
+          </View>
+        </Card>
+      ) : isLoading ? (
         <ListSkeleton />
       ) : threads.length === 0 ? (
         <EmptyState

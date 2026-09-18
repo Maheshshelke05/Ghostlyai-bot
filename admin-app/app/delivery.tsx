@@ -3,10 +3,11 @@ import { router } from "expo-router";
 import { useState } from "react";
 import { Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
 
+import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Chip } from "@/components/ui/Chip";
 import { ListSkeleton } from "@/components/ui/Skeleton";
-import { getDeliveryStats, type CategoryDeliveryRow } from "@/lib/api";
+import { apiErrorMessage, getDeliveryStats, type CategoryDeliveryRow } from "@/lib/api";
 
 type Sort = "waiting" | "jobs" | "sent";
 
@@ -15,7 +16,7 @@ export default function DeliveryReportScreen() {
   const [sort, setSort] = useState<Sort>("waiting");
   const [onlyProblems, setOnlyProblems] = useState(false);
 
-  const { data, isLoading, refetch, isRefetching } = useQuery({
+  const { data, isLoading, isError, error, refetch, isRefetching } = useQuery({
     queryKey: ["delivery-stats", days],
     queryFn: () => getDeliveryStats(days),
   });
@@ -53,7 +54,16 @@ export default function DeliveryReportScreen() {
         <Chip label="Only with issues" selected={onlyProblems} onPress={() => setOnlyProblems((v) => !v)} />
       </View>
 
-      {isLoading || !data ? (
+      {isError ? (
+        <Card className="items-center py-6">
+          <Text className="text-muted text-center mb-4">
+            {apiErrorMessage(error, "Couldn't load the delivery report. Check your internet connection.")}
+          </Text>
+          <View className="w-40">
+            <Button label="Retry" onPress={() => refetch()} variant="brand" />
+          </View>
+        </Card>
+      ) : isLoading || !data ? (
         <ListSkeleton />
       ) : (
         <>

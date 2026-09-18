@@ -56,25 +56,36 @@ async def list_threads(
     page = max(page, 1)
     size = max(1, min(size, 100))
     total = (await db.execute(select(func.count()).select_from(stmt.subquery()))).scalar_one()
-    users = (
-        await db.execute(stmt.order_by(last_in.desc()).offset((page - 1) * size).limit(size))
-    ).scalars().all()
+    # Pull last_in/last_out along with each user row (add_columns keeps stmt's existing filters)
+    # so "awaiting reply" is answered by the same query, and batch-fetch every page's latest
+    # message in one extra round-trip - this used to run 2 extra queries per user (up to 200
+    # round-trips for a full page), which is exactly what made this screen take several
+    # seconds to load.
+    paged_stmt = (
+        stmt.add_columns(last_in.label("last_in"), last_out.label("last_out"))
+        .order_by(last_in.desc())
+        .offset((page - 1) * size)
+        .limit(size)
+    )
+    rows = (await db.execute(paged_stmt)).all()
 
-    items = []
-    for user in users:
-        last = (
+    user_ids = [user.id for user, _, _ in rows]
+    latest_by_user: dict[int, SupportMessage] = {}
+    if user_ids:
+        all_recent = (
             await db.execute(
                 select(SupportMessage)
-                .where(SupportMessage.user_id == user.id)
-                .order_by(SupportMessage.created_at.desc())
-                .limit(1)
+                .where(SupportMessage.user_id.in_(user_ids))
+                .order_by(SupportMessage.user_id, SupportMessage.created_at.desc())
             )
-        ).scalar_one_or_none()
-        unanswered = (
-            await db.execute(select(func.count()).select_from(
-                select(User.id).where(User.id == user.id, _awaiting_reply_clause()).subquery()
-            ))
-        ).scalar_one()
+        ).scalars().all()
+        for m in all_recent:
+            latest_by_user.setdefault(m.user_id, m)  # first hit per user_id is the latest
+
+    items = []
+    for user, last_in_at, last_out_at in rows:
+        last = latest_by_user.get(user.id)
+        awaiting_reply = last_in_at is not None and (last_out_at is None or last_out_at < last_in_at)
         items.append({
             "user_id": user.id,
             "full_name": user.full_name,
@@ -84,7 +95,7 @@ async def list_threads(
             "last_message": last.text if last else None,
             "last_direction": last.direction if last else None,
             "last_at": last.created_at.isoformat() if last else None,
-            "awaiting_reply": bool(unanswered),
+            "awaiting_reply": bool(awaiting_reply),
         })
     return {"items": items, "total": total, "page": page, "size": size}
 

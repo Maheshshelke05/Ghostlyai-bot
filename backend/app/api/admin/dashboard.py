@@ -11,6 +11,7 @@ from app.api.admin.deps import owner_only
 from app.config import settings
 from app.db.models import Job, JobDelivery, Payment, Subscription, User, utcnow
 from app.db.session import get_db
+from app.services import cache
 from app.services.access import access_label_sql, paid_sql
 
 router = APIRouter(prefix="/admin", tags=["admin-dashboard"])
@@ -28,6 +29,13 @@ def _ist_bounds_utc(d):
 async def dashboard(
     db: AsyncSession = Depends(get_db), _admin=Depends(owner_only)
 ) -> dict:
+    # ~14 sequential aggregate queries, each a network round-trip to a remote (Neon) Postgres -
+    # cheap to compute but slow to re-run on every dashboard glance, so a short cache makes
+    # repeat loads (auto-refresh, pull-to-refresh, re-opening the tab) instant.
+    return await cache.get_or_set("admin:dashboard", ttl_seconds=20, compute=lambda: _compute_dashboard(db))
+
+
+async def _compute_dashboard(db: AsyncSession) -> dict:
     now = utcnow()
     today_ist = datetime.now(settings.tz).date()
     today_start, today_end = _ist_bounds_utc(today_ist)
