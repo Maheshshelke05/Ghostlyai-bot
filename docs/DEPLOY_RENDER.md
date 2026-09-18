@@ -128,6 +128,27 @@ Send `/start` to your bot on Telegram — you should get the language selection 
 couple of seconds (once you've also done the keep-alive setup below — on a cold, just-deployed
 free instance the very first request can take 30-60s while it spins up).
 
+## Region: match your database's region
+
+`render.yaml` sets `region: ohio` because Neon databases are commonly provisioned in `us-east-2`
+(AWS's name for the Ohio datacenter) - if your Neon project is somewhere else, match that
+instead (check its connection string, e.g. `...aws.neon.tech` usually names the region). This
+matters a lot: every single query is a round trip between Render's datacenter and Neon's, so a
+mismatch (this project's Render service was originally created in `singapore` while its Neon
+database is in Ohio) adds several hundred milliseconds to *every* database call, easily turning
+a normally-fast endpoint into one that takes multiple seconds.
+
+Render does not move an already-running service to a new region just because `render.yaml`
+changes - that field only applies when a service is first created. To actually fix a running
+service's region:
+
+1. Render dashboard -> the service -> **Settings** -> check for a **Region** field. Some plans
+   allow changing it in place; if so, this is the easy path.
+2. If not offered, the practical option is to create a fresh service from this same Blueprint
+   (New -> Blueprint, same repo) so it picks up `region: ohio`, re-enter its env vars (same
+   values as the old service), point your domain's DNS at the new service once it's healthy,
+   and only then delete the old one - so there's no gap in uptime while you cut over.
+
 ## Free tier trade-off: keeping it awake
 
 Render's free web services spin down completely after **15 minutes with no incoming HTTP
@@ -165,7 +186,7 @@ scheduler back out:
        name: ghostlyai-worker
        runtime: docker
        plan: starter
-       region: singapore
+       region: ohio
        dockerfilePath: ./backend/Dockerfile
        dockerContext: ./backend
        dockerCommand: python -m app.workers.scheduler

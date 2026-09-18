@@ -21,7 +21,13 @@ services:
     name: ghostlyai-api
     runtime: docker
     plan: free
-    region: singapore
+    # Was "singapore" - the Neon database is in Ohio (us-east-2), so every single query paid a
+    # Singapore<->Ohio round trip (~250-300ms one-way on a good day). Matching the region cuts
+    # that to a same-datacenter-ish hop. NOTE: Render does not migrate an already-running
+    # service's region just because this file changes - the live service still needs to be
+    # recreated in "ohio" via the dashboard (or a fresh Blueprint deploy) for this to take
+    # effect; see docs/DEPLOY_RENDER.md.
+    region: ohio
     dockerfilePath: ./backend/Dockerfile
     dockerContext: ./backend
     healthCheckPath: /health
