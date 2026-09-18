@@ -1,8 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useRef } from "react";
 
-import { firstOfNumber } from "@/lib/ghostlyFormat";
-import { getGhostlyStats, listGhostlySupport } from "@/lib/ghostlyApi";
+import { firstOfString, namesSummary, type AnyRecord } from "@/lib/ghostlyFormat";
+import { listGhostlySupport, listGhostlyUsers } from "@/lib/ghostlyApi";
 import { getDashboard, listSupportThreads } from "@/lib/api";
 import { useAuthStore, useIsOwner } from "@/store/auth";
 import { useToast } from "./ui/Toast";
@@ -16,13 +16,11 @@ const POLL_MS = 60_000;
  *
  * This runs only while the app is open (foreground or backgrounded-but-alive) - it's a poll
  * against our own API every 60s, not an OS-level push notification that would also fire while
- * the app is fully closed. That's a bigger separate feature (Expo push tokens + a backend
- * event hook / push-sending service); this covers "on screen while using the app".
+ * the app is fully closed (see PushRegistration + the backend's ghostly_alerts worker for that).
  *
- * Both Job Alert Bot's own queries and GhostlyAI's proxied ones run regardless of which
- * workspace is currently selected, and share query keys with each workspace's own dashboard
- * screen, so when that screen is visible this doesn't add extra network calls beyond what it
- * already does.
+ * The GhostlyAI side tracks actual user/ticket IDs (not just a count) so the toast can name who
+ * signed up or what came in, the same way the backend's push notification does - a bare "3 new
+ * users today" without saying who is not very useful on its own.
  */
 export function GlobalAlerts() {
   const token = useAuthStore((s) => s.token);
@@ -44,9 +42,9 @@ export function GlobalAlerts() {
     enabled,
     refetchInterval: POLL_MS,
   });
-  const ghStats = useQuery({
-    queryKey: ["ghostly-stats"],
-    queryFn: getGhostlyStats,
+  const ghNewUsers = useQuery({
+    queryKey: ["ghostly-users", undefined, "new_today"],
+    queryFn: () => listGhostlyUsers({ filter: "new_today" }),
     enabled,
     refetchInterval: POLL_MS,
     retry: false,
@@ -60,8 +58,8 @@ export function GlobalAlerts() {
   });
 
   // undefined = "haven't established a baseline yet" - the first observed value never alerts,
-  // only real increases after that do.
-  const seen = useRef<{ jaNewToday?: number; jaOpenSupport?: number; ghNewToday?: number; ghTicketCount?: number }>({});
+  // only real changes after that do.
+  const seen = useRef<{ jaNewToday?: number; jaOpenSupport?: number; ghUserIds?: Set<string>; ghTicketIds?: Set<string> }>({});
 
   useEffect(() => {
     const v = jaDashboard.data?.users.new_today;
@@ -82,21 +80,31 @@ export function GlobalAlerts() {
   }, [jaSupport.data, show]);
 
   useEffect(() => {
-    if (!ghStats.data) return;
-    const v = firstOfNumber(ghStats.data, ["newUsersToday", "new_users_today"]);
-    if (seen.current.ghNewToday !== undefined && v > seen.current.ghNewToday) {
-      show(`👻 New user signed up — GhostlyAI.in (${v} today)`, "success");
+    if (!ghNewUsers.data) return;
+    const idOf = (u: AnyRecord) => firstOfString(u, ["user_id", "id"]);
+    const currentIds = new Set(ghNewUsers.data.map(idOf).filter(Boolean));
+    if (seen.current.ghUserIds) {
+      const newOnes = ghNewUsers.data.filter((u) => idOf(u) && !seen.current.ghUserIds!.has(idOf(u)));
+      if (newOnes.length > 0) {
+        const names = newOnes.map((u) => firstOfString(u, ["name", "email"], "Someone"));
+        show(`👻 ${namesSummary(names, "users")} signed up — GhostlyAI.in`, "success");
+      }
     }
-    seen.current.ghNewToday = v;
-  }, [ghStats.data, show]);
+    seen.current.ghUserIds = currentIds;
+  }, [ghNewUsers.data, show]);
 
   useEffect(() => {
     if (!ghSupport.data) return;
-    const v = ghSupport.data.length;
-    if (seen.current.ghTicketCount !== undefined && v > seen.current.ghTicketCount) {
-      show("👻 New support ticket — GhostlyAI.in", "warn");
+    const idOf = (t: AnyRecord) => firstOfString(t, ["id"]);
+    const currentIds = new Set(ghSupport.data.map(idOf).filter(Boolean));
+    if (seen.current.ghTicketIds) {
+      const newOnes = ghSupport.data.filter((t) => idOf(t) && !seen.current.ghTicketIds!.has(idOf(t)));
+      if (newOnes.length > 0) {
+        const subjects = newOnes.map((t) => firstOfString(t, ["subject", "user_name"], "New ticket"));
+        show(`👻 ${namesSummary(subjects, "tickets")} — GhostlyAI.in`, "warn");
+      }
     }
-    seen.current.ghTicketCount = v;
+    seen.current.ghTicketIds = currentIds;
   }, [ghSupport.data, show]);
 
   return null;

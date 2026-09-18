@@ -28,6 +28,15 @@ export default function GhostlyUsersScreen() {
   const { data, isLoading, isFetching, refetch, error } = useQuery({
     queryKey: ["ghostly-users", query, filter],
     queryFn: () => listGhostlyUsers({ search: query || undefined, filter: filter === "new_today" ? "new_today" : undefined }),
+    // "New today" should read newest-first - the API's own order isn't reliably that.
+    select: (users: AnyRecord[]) =>
+      filter === "new_today"
+        ? [...users].sort((a, b) => {
+            const da = Date.parse(firstOfString(a, ["created_at", "signup_date"]));
+            const db_ = Date.parse(firstOfString(b, ["created_at", "signup_date"]));
+            return (Number.isNaN(db_) ? 0 : db_) - (Number.isNaN(da) ? 0 : da);
+          })
+        : users,
   });
 
   const users = data ?? [];

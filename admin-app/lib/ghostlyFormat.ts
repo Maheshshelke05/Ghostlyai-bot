@@ -104,6 +104,15 @@ export const isPlainObject = (value: unknown): value is AnyRecord =>
  * front-and-centre by the screen, or are internal/noisy. */
 export const COMMON_HIDDEN_KEYS = ["id", "_id", "uid", "user_id", "ticket_id"];
 
+/** "Alice" / "Alice, Bob" / "Alice, Bob, Carol and 2 more users" - mirrors the backend's
+ * _names_summary() (app/workers/ghostly_alerts.py) so the in-app toast and the OS push read
+ * the same way for the same event. */
+export function namesSummary(names: string[], noun: string): string {
+  if (names.length === 1) return names[0];
+  if (names.length <= 3) return names.join(", ");
+  return `${names.slice(0, 3).join(", ")} and ${names.length - 3} more ${noun}`;
+}
+
 /** Announcement bodies come back as HTML (`<p>...</p>`); strips tags for a plain-text list
  * preview. Not used for the compose form - that still sends/shows the raw text as typed. */
 export function stripHtml(html: string): string {

@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { router } from "expo-router";
+import { BarChart, PieChart } from "react-native-gifted-charts";
 import { RefreshControl, ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -8,8 +9,8 @@ import { KeyValueList } from "@/components/ui/KeyValueList";
 import { ListSkeleton } from "@/components/ui/Skeleton";
 import { StatCard } from "@/components/ui/StatCard";
 import { apiErrorMessage } from "@/lib/api";
-import { firstOfNumber } from "@/lib/ghostlyFormat";
-import { getGhostlyStats, listGhostlySupport, listGhostlyUsers } from "@/lib/ghostlyApi";
+import { firstOfNumber, firstOfString, humanizeKey, type AnyRecord } from "@/lib/ghostlyFormat";
+import { getGhostlyEmailStats, getGhostlyStats, listGhostlySupport, listGhostlyUsers } from "@/lib/ghostlyApi";
 import { useAppModeStore } from "@/store/appMode";
 
 export default function GhostlyDashboard() {
@@ -26,6 +27,14 @@ export default function GhostlyDashboard() {
     queryKey: ["ghostly-users", "new_today"],
     queryFn: () => listGhostlyUsers({ filter: "new_today" }),
     refetchInterval: 60_000,
+    // The API's own order isn't reliably newest-first - sort explicitly so "latest signups"
+    // actually shows the latest ones, not whatever order the API happened to return.
+    select: (users: AnyRecord[]) =>
+      [...users].sort((a, b) => {
+        const da = Date.parse(firstOfString(a, ["created_at", "signup_date"]));
+        const db_ = Date.parse(firstOfString(b, ["created_at", "signup_date"]));
+        return (Number.isNaN(db_) ? 0 : db_) - (Number.isNaN(da) ? 0 : da);
+      }),
   });
 
   const support = useQuery({
@@ -34,14 +43,21 @@ export default function GhostlyDashboard() {
     refetchInterval: 30_000,
   });
 
+  const emailStats = useQuery({
+    queryKey: ["ghostly-email-stats"],
+    queryFn: getGhostlyEmailStats,
+    refetchInterval: 60_000,
+  });
+
   const loading = stats.isLoading || newToday.isLoading || support.isLoading;
   const error = stats.error || newToday.error || support.error;
 
-  const refreshing = stats.isFetching || newToday.isFetching || support.isFetching;
+  const refreshing = stats.isFetching || newToday.isFetching || support.isFetching || emailStats.isFetching;
   const refresh = () => {
     stats.refetch();
     newToday.refetch();
     support.refetch();
+    emailStats.refetch();
   };
 
   const openTickets = (support.data ?? []).filter((t) => {
@@ -72,8 +88,27 @@ export default function GhostlyDashboard() {
     "blocked_count",
     "activeToday",
     "active_today",
+    "freeUsers",
+    "free_users",
   ];
   const restOfStats = Object.fromEntries(Object.entries(s).filter(([k]) => !knownStatKeys.includes(k)));
+  const freeUsers = firstOfNumber(s, ["freeUsers", "free_users"], Math.max(totalUsers - proUsers, 0));
+
+  const userSplitData =
+    totalUsers > 0
+      ? [
+          { value: freeUsers, color: "#E5E5EA", text: freeUsers > 0 ? "Free" : "" },
+          { value: proUsers, color: "#EA580C", text: proUsers > 0 ? "Pro" : "" },
+        ].filter((d) => d.value > 0)
+      : [];
+  const proPercent = totalUsers > 0 ? Math.round((proUsers / totalUsers) * 100) : 0;
+
+  const byType = (emailStats.data?.byType ?? {}) as Record<string, unknown>;
+  const emailBarData = Object.entries(byType).map(([type, count]) => ({
+    value: typeof count === "number" ? count : 0,
+    label: humanizeKey(type).split(" ")[0],
+    frontColor: "#EA580C",
+  }));
 
   return (
     <ScrollView
@@ -137,6 +172,59 @@ export default function GhostlyDashboard() {
             />
           </View>
 
+          <View className="flex-row gap-3 px-4 mt-2 mb-1">
+            <Card className="flex-1 items-center">
+              <Text className="text-[13px] font-semibold text-muted mb-2 uppercase tracking-wide self-start">
+                Users
+              </Text>
+              {userSplitData.length > 0 ? (
+                <>
+                  <PieChart
+                    data={userSplitData}
+                    donut
+                    radius={54}
+                    innerRadius={38}
+                    centerLabelComponent={() => (
+                      <View className="items-center">
+                        <Text className="text-[18px] font-bold text-ink">{proPercent}%</Text>
+                        <Text className="text-[10px] text-muted">Pro</Text>
+                      </View>
+                    )}
+                  />
+                  <View className="flex-row mt-3">
+                    <Legend color="#E5E5EA" label={`Free ${freeUsers.toLocaleString("en-IN")}`} />
+                    <Legend color="#EA580C" label={`Pro ${proUsers.toLocaleString("en-IN")}`} />
+                  </View>
+                </>
+              ) : (
+                <Text className="text-muted text-xs py-6">No user data yet</Text>
+              )}
+            </Card>
+
+            <Card className="flex-1">
+              <Text className="text-[13px] font-semibold text-muted mb-2 uppercase tracking-wide">
+                Email activity
+              </Text>
+              {emailBarData.length > 0 ? (
+                <BarChart
+                  data={emailBarData}
+                  barWidth={16}
+                  spacing={12}
+                  roundedTop
+                  hideRules
+                  xAxisThickness={0}
+                  yAxisThickness={0}
+                  noOfSections={3}
+                  height={100}
+                  yAxisTextStyle={{ color: "#8E8E93", fontSize: 9 }}
+                  xAxisLabelTextStyle={{ color: "#8E8E93", fontSize: 9 }}
+                />
+              ) : (
+                <Text className="text-muted text-xs py-6 text-center">No email data yet</Text>
+              )}
+            </Card>
+          </View>
+
           {Object.keys(restOfStats).length > 0 ? (
             <View className="px-4 mt-2">
               <KeyValueList data={restOfStats} title="All stats from GhostlyAI.in" />
@@ -177,5 +265,14 @@ export default function GhostlyDashboard() {
         </>
       )}
     </ScrollView>
+  );
+}
+
+function Legend({ color, label }: { color: string; label: string }) {
+  return (
+    <View className="flex-row items-center mr-3">
+      <View className="w-2.5 h-2.5 rounded-full mr-1.5" style={{ backgroundColor: color }} />
+      <Text className="text-[11px] text-muted">{label}</Text>
+    </View>
   );
 }

@@ -161,10 +161,12 @@ async def test_ghostly_alerts_first_run_only_baselines(engine, monkeypatch):
         await s.commit()
 
     def handler(request: httpx.Request) -> httpx.Response:
-        if request.url.path.endswith("/stats"):
-            return httpx.Response(200, json={"newUsersToday": 5})
+        if request.url.path.endswith("/users"):
+            return httpx.Response(200, json={"users": [
+                {"user_id": "u1", "name": "Alice"}, {"user_id": "u2", "name": "Bob"},
+            ]})
         if request.url.path.endswith("/support"):
-            return httpx.Response(200, json=[{"id": "t1"}, {"id": "t2"}])
+            return httpx.Response(200, json=[{"id": "t1", "subject": "Help"}, {"id": "t2", "subject": "Bug"}])
         raise AssertionError(f"unexpected push during baseline run: {request.url}")
 
     monkeypatch.setattr(ghostly.httpx, "AsyncClient", _mock_client(handler))
@@ -172,10 +174,12 @@ async def test_ghostly_alerts_first_run_only_baselines(engine, monkeypatch):
 
     async with factory() as s:
         state = await get_internal_state(s, STATE_KEY)
-    assert state == {"baseline_done": True, "last_new_users_today": 5, "last_ticket_count": 2}
+    assert state["baseline_done"] is True
+    assert sorted(state["seen_new_user_ids"]) == ["u1", "u2"]
+    assert sorted(state["seen_ticket_ids"]) == ["t1", "t2"]
 
 
-async def test_ghostly_alerts_increase_triggers_push_then_settles(engine, monkeypatch):
+async def test_ghostly_alerts_new_ids_trigger_named_push_then_settle(engine, monkeypatch):
     _configure_ghostly(monkeypatch)
     monkeypatch.setattr(ghostly_alerts_module, "session_scope", _session_scope_for(engine))
     factory = async_sessionmaker(engine, expire_on_commit=False, autoflush=False)
@@ -183,15 +187,16 @@ async def test_ghostly_alerts_increase_triggers_push_then_settles(engine, monkey
         s.add(Admin(name="A", email="a6@x.com", password_hash="x", role="owner", is_active=True, expo_push_token="tokA"))
         await s.commit()
 
-    counts = {"users": 5, "tickets": 2}
+    users = [{"user_id": "u1", "name": "Alice"}, {"user_id": "u2", "name": "Bob"}]
+    tickets = [{"id": "t1", "subject": "Help"}, {"id": "t2", "subject": "Bug"}]
     push_calls = []
 
     def handler(request: httpx.Request) -> httpx.Response:
-        if request.url.path.endswith("/stats"):
-            return httpx.Response(200, json={"newUsersToday": counts["users"]})
+        if request.url.path.endswith("/users"):
+            return httpx.Response(200, json={"users": users})
         if request.url.path.endswith("/support"):
-            return httpx.Response(200, json=[{"id": f"t{i}"} for i in range(counts["tickets"])])
-        if "exp.host" in str(request.url) or request.url.host == "exp.host":
+            return httpx.Response(200, json=tickets)
+        if request.url.host == "exp.host":
             push_calls.append(json.loads(request.content))
             return httpx.Response(200, json={"data": [{"status": "ok"}]})
         raise AssertionError(f"unexpected request: {request.url}")
@@ -203,17 +208,54 @@ async def test_ghostly_alerts_increase_triggers_push_then_settles(engine, monkey
     await ghostly_alerts_tick()  # baseline, no push
     assert push_calls == []
 
-    counts["users"] = 8
-    counts["tickets"] = 3
-    await ghostly_alerts_tick()  # both increased -> two pushes
+    users.append({"user_id": "u3", "name": "Charlie"})
+    tickets.append({"id": "t3", "subject": "Crash on login"})
+    await ghostly_alerts_tick()  # one new user, one new ticket -> two named pushes
     assert len(push_calls) == 2
     bodies = {c[0]["title"]: c[0]["body"] for c in push_calls}
-    assert "3 new users today (8 total today)" in bodies["New user signed up — GhostlyAI.in"]
-    assert "1 new ticket" in bodies["New support ticket — GhostlyAI.in"]
+    assert bodies["1 new user signed up — GhostlyAI.in"] == "Charlie"
+    assert bodies["1 new support ticket — GhostlyAI.in"] == "Crash on login"
 
     push_calls.clear()
     await ghostly_alerts_tick()  # unchanged -> no push
     assert push_calls == []
+
+
+async def test_ghostly_alerts_names_multiple_new_users(engine, monkeypatch):
+    _configure_ghostly(monkeypatch)
+    monkeypatch.setattr(ghostly_alerts_module, "session_scope", _session_scope_for(engine))
+    factory = async_sessionmaker(engine, expire_on_commit=False, autoflush=False)
+    async with factory() as s:
+        s.add(Admin(name="A", email="a7@x.com", password_hash="x", role="owner", is_active=True, expo_push_token="tokA"))
+        await s.commit()
+
+    users = []
+    push_calls = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path.endswith("/users"):
+            return httpx.Response(200, json={"users": users})
+        if request.url.path.endswith("/support"):
+            return httpx.Response(200, json=[])
+        if request.url.host == "exp.host":
+            push_calls.append(json.loads(request.content))
+            return httpx.Response(200, json={"data": [{"status": "ok"}]})
+        raise AssertionError(f"unexpected request: {request.url}")
+
+    mock = _mock_client(handler)
+    monkeypatch.setattr(ghostly.httpx, "AsyncClient", mock)
+    monkeypatch.setattr(push.httpx, "AsyncClient", mock)
+
+    await ghostly_alerts_tick()  # baseline (empty), no push
+
+    users.extend(
+        {"user_id": f"u{i}", "name": f"Person{i}"} for i in range(5)
+    )
+    await ghostly_alerts_tick()
+    assert len(push_calls) == 1
+    title, body = push_calls[0][0]["title"], push_calls[0][0]["body"]
+    assert title == "5 new users signed up — GhostlyAI.in"
+    assert body == "Person0, Person1, Person2 and 2 more users"
 
 
 async def test_ghostly_alerts_skips_when_not_configured(db, monkeypatch):
