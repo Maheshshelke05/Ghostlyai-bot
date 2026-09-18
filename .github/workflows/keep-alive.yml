@@ -1,0 +1,21 @@
+name: Keep Backend Awake
+
+# Render's free web-service plan spins the container down after ~15 min idle; the next real
+# request then pays a 30-60s cold start. Pinging /health every 10 min keeps it warm, at the
+# cost of ~730 hrs/month against the free tier's usage allowance - fine for a single service.
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch: {}
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping /health
+        run: |
+          code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 25 https://api.ghotlyai.in/health)
+          echo "health check responded $code"
+          if [ "$code" != "200" ]; then
+            echo "::warning::Health check returned $code instead of 200"
+          fi
