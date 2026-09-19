@@ -5,8 +5,10 @@ import { createJSONStorage, persist, type StateStorage } from "zustand/middlewar
 import {
   type AuthOut,
   type NextStep,
+  type SignupOut,
   type StudentOut,
   fetchMe,
+  login as apiLogin,
   signupWithResume as apiSignupWithResume,
   setAuthToken,
   setOnUnauthorized,
@@ -26,7 +28,8 @@ interface AuthState {
   signupWithResume: (
     file: { uri: string; name: string; mimeType?: string },
     fullName?: string
-  ) => Promise<AuthOut>;
+  ) => Promise<SignupOut>;
+  login: (identifier: string, password: string) => Promise<AuthOut>;
   commitAuth: (accessToken: string, me: { user: StudentOut; next_step: NextStep }) => void;
   logout: () => void;
   refreshMe: () => Promise<void>;
@@ -42,13 +45,18 @@ export const useAuthStore = create<AuthState>()(
       nextStep: null,
       hydrated: false,
 
-      // Deliberately does NOT commit to the persisted store - the resume upload screen holds
-      // the result while the "creating your profile" animation plays (and fills in a missing
-      // phone number if needed), then calls commitAuth() once that's done. Committing here
-      // would flip the root layout's Stack.Protected guards immediately, skipping the animation.
+      // Never issues a real access_token or touches the persisted store - resume upload alone
+      // is not a login. The app either sets a password next (brand new / first app use) or is
+      // told to go straight to Login (an account with a password already exists).
       signupWithResume: async (file, fullName) => {
-        const result = await apiSignupWithResume(file, fullName);
-        setAuthToken(result.access_token);
+        return await apiSignupWithResume(file, fullName);
+      },
+
+      // The one place a full access_token is actually issued. Committing it (below) is what
+      // flips the root layout's Stack.Protected guards into (onboarding)/(tabs).
+      login: async (identifier, password) => {
+        const result = await apiLogin(identifier, password);
+        get().commitAuth(result.access_token, { user: result.user, next_step: result.next_step });
         return result;
       },
 

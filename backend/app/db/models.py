@@ -112,6 +112,10 @@ class User(Base):
     # an existing Telegram user who later opens the app keeps their telegram_id, so admin needs
     # both this and telegram_id to show accurate Telegram/App badges for a dual-channel student.
     app_seen_at: Mapped[Optional[datetime]] = mapped_column(TZDateTime, nullable=True)
+    # App login password (bcrypt) - null until the student completes the "set a password" step
+    # after their first resume upload. The Telegram bot has no equivalent field or use for this;
+    # a Telegram user who later opens the app sets one the same way any new app user does.
+    password_hash: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(TZDateTime, nullable=False, default=utcnow)
     updated_at: Mapped[datetime] = mapped_column(

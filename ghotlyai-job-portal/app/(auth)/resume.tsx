@@ -16,7 +16,8 @@ export default function ResumeSignupScreen() {
   const signupWithResume = useAuthStore((s) => s.signupWithResume);
   const pendingName = useOnboardingDraft((s) => s.pendingName);
   const setSuggestedCategorySlugs = useOnboardingDraft((s) => s.setSuggestedCategorySlugs);
-  const setPendingAuth = useOnboardingDraft((s) => s.setPendingAuth);
+  const setPendingSignup = useOnboardingDraft((s) => s.setPendingSignup);
+  const setLoginPrefill = useOnboardingDraft((s) => s.setLoginPrefill);
 
   async function submit(file: { uri: string; name: string; mimeType?: string }) {
     setError(null);
@@ -24,10 +25,14 @@ export default function ResumeSignupScreen() {
     try {
       const result = await signupWithResume(file, pendingName);
       setSuggestedCategorySlugs(result.suggested_category_slugs);
-      setPendingAuth(result);
-      // The actual sign-in (committing to the persisted auth store, which flips the root
-      // layout's Stack.Protected guards) happens at the end of the "creating your profile"
-      // animation, not here - see (auth)/creating-profile.tsx.
+      if (result.needs_login) {
+        // Account already has a password (returning student, or a Telegram user who set one
+        // up before) - straight to Login, prefilled, no signup_token was even issued.
+        setLoginPrefill(result.phone ?? result.email ?? "");
+        router.replace("/(auth)/login");
+        return;
+      }
+      setPendingSignup(result);
       router.replace("/(auth)/creating-profile");
     } catch (err) {
       setError(apiErrorMessage(err, "Could not read this file. Try a clearer PDF or photo."));
@@ -56,7 +61,7 @@ export default function ResumeSignupScreen() {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-white px-6" edges={["top", "bottom"]}>
+    <SafeAreaView className="flex-1 bg-background px-6" edges={["top", "bottom"]}>
       <View className="flex-1 justify-center">
         <Text className="text-5xl text-center mb-6">📄</Text>
         <Text className="font-display text-ink text-[26px] text-center mb-2">Upload your resume</Text>

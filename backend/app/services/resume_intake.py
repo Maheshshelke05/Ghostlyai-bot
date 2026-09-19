@@ -90,7 +90,9 @@ async def apply_resume_to_user(db, user: User, data: bytes, mime: str, filename:
         canon = canonical_district(result.city_or_district)
         user.district = canon if canon else result.city_or_district.title()
     if not user.email and result.email:
-        user.email = result.email[:160]
+        # Always lowercase - POST /student/auth/login matches on it case-sensitively, and
+        # Gemini extracts the email exactly as it appears in the resume (any casing).
+        user.email = result.email.strip().lower()[:160]
     await db.flush()
 
     return profile

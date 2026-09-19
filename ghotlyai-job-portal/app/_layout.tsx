@@ -1,6 +1,7 @@
 import "../global.css";
 
 import { Hind_400Regular, Hind_600SemiBold } from "@expo-google-fonts/hind";
+import { Newsreader_600SemiBold, Newsreader_700Bold } from "@expo-google-fonts/newsreader";
 import { Poppins_600SemiBold, Poppins_700Bold } from "@expo-google-fonts/poppins";
 import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -23,6 +24,8 @@ export default function RootLayout() {
     Poppins_700Bold,
     Hind_400Regular,
     Hind_600SemiBold,
+    Newsreader_600SemiBold,
+    Newsreader_700Bold,
   });
   const hydrated = useAuthStore((s) => s.hydrated);
   const token = useAuthStore((s) => s.token);
@@ -48,12 +51,12 @@ export default function RootLayout() {
             <Stack
               screenOptions={{
                 headerShown: false,
-                headerStyle: { backgroundColor: "#FFFFFF" },
+                headerStyle: { backgroundColor: "#F7F5F2" },
                 headerShadowVisible: false,
                 headerTintColor: "#EA580C",
                 headerTitleStyle: { fontWeight: "600", fontSize: 17, color: "#1C1C1E" },
                 headerBackButtonDisplayMode: "minimal",
-                contentStyle: { backgroundColor: "#FFFFFF" },
+                contentStyle: { backgroundColor: "#F7F5F2" },
               }}
             >
               <Stack.Protected guard={onboarded}>

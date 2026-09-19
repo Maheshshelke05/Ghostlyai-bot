@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/Button";
 
 export default function WelcomeScreen() {
   return (
-    <View style={{ flex: 1, backgroundColor: "#FFFFFF" }}>
+    <View style={{ flex: 1, backgroundColor: "#F7F5F2" }}>
       <SafeAreaView className="flex-1 px-6" edges={["top", "bottom"]}>
         <View className="flex-1 items-center justify-center">
           <MotiView
@@ -52,7 +52,10 @@ export default function WelcomeScreen() {
               3 days free, then just ₹99 for 30 days. No hidden charges.
             </Text>
           </View>
-          <Button label="Get started" onPress={() => router.push("/(auth)/splash")} />
+          <View className="gap-3">
+            <Button label="Sign up" onPress={() => router.push("/(auth)/splash")} />
+            <Button label="Log in" onPress={() => router.push("/(auth)/login")} variant="ghost" />
+          </View>
         </MotiView>
       </SafeAreaView>
     </View>

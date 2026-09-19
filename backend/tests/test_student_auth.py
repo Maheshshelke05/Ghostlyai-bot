@@ -1,8 +1,13 @@
-"""Student app resume-first signup + onboarding (Phase A, revised: no phone OTP - identity
-comes from the uploaded resume, same trust model the Telegram bot already has for whatever a
-user types)."""
+"""Student app authentication: resume-first identity, then a real password.
+
+Flow under test: POST /resume (extract identity, no token) -> POST /set-password (using the
+short-lived signup_token) -> POST /login (phone/email + password, issues the real access_token)."""
 from __future__ import annotations
 
+from sqlalchemy import select
+
+from app.db.models import User
+from app.services import ratelimit
 from app.services.ai import ResumeData
 from app.services.auth import create_token
 
@@ -58,24 +63,51 @@ async def _student_headers(user) -> dict:
     return {"Authorization": f"Bearer {token}"}
 
 
-async def test_signup_new_user_creates_app_only_account_from_resume(client, categories, monkeypatch):
-    monkeypatch.setattr(
-        "app.services.resume_intake.ai.parse_resume",
-        _fake_parse_resume(_resume(phone="9876500001", suggested_category_slugs=["it-software"])),
-    )
+async def _upload_resume(client, monkeypatch, resume: ResumeData, full_name: str | None = None):
+    monkeypatch.setattr("app.services.resume_intake.ai.parse_resume", _fake_parse_resume(resume))
     monkeypatch.setattr("app.services.resume_intake.storage.save_resume", _fake_save_resume)
+    data = {"full_name": full_name} if full_name else {}
+    return await client.post("/student/auth/resume", data=data, files=_resume_file())
 
-    resp = await client.post("/student/auth/resume", files=_resume_file())
+
+async def _signup_and_login(
+    client, monkeypatch, phone: str | None, password: str = "testpass123", identifier: str | None = None
+) -> str:
+    """Full happy path: upload resume -> set password -> log in. Returns the access_token."""
+    resp = await _upload_resume(client, monkeypatch, _resume(phone=phone))
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["needs_login"] is False
+
+    resp = await client.post(
+        "/student/auth/set-password",
+        json={"password": password},
+        headers={"Authorization": f"Bearer {body['signup_token']}"},
+    )
+    assert resp.status_code == 200, resp.text
+    set_pw = resp.json()
+
+    resp = await client.post(
+        "/student/auth/login",
+        json={"identifier": identifier or set_pw["phone"] or set_pw["email"], "password": password},
+    )
+    assert resp.status_code == 200, resp.text
+    return resp.json()["access_token"]
+
+
+async def test_signup_new_user_extracts_identity_and_issues_signup_token(client, categories, monkeypatch):
+    resp = await _upload_resume(
+        client, monkeypatch, _resume(phone="9876500001", suggested_category_slugs=["it-software"])
+    )
     assert resp.status_code == 200, resp.text
     body = resp.json()
     assert body["is_new_user"] is True
-    assert body["user"]["phone"] == "+919876500001"
-    assert body["user"]["full_name"] == "Rahul Sharma"
-    assert body["user"]["email"] == "rahul@example.com"
-    assert body["user"]["status"] == "onboarding"
-    assert body["next_step"] == "profile"  # name already extracted, no district step
+    assert body["needs_login"] is False
+    assert body["signup_token"]
+    assert body["phone"] == "+919876500001"
+    assert body["full_name"] == "Rahul Sharma"
+    assert body["email"] == "rahul@example.com"
     assert body["suggested_category_slugs"] == ["it-software"]
-    assert body["access_token"]
 
 
 async def test_signup_sets_app_seen_at_for_admin_visibility(client, db, categories, monkeypatch):
@@ -89,13 +121,7 @@ async def test_signup_sets_app_seen_at_for_admin_visibility(client, db, categori
     await db.commit()
     assert telegram_user.app_seen_at is None
 
-    monkeypatch.setattr(
-        "app.services.resume_intake.ai.parse_resume",
-        _fake_parse_resume(_resume(phone="9876500013")),
-    )
-    monkeypatch.setattr("app.services.resume_intake.storage.save_resume", _fake_save_resume)
-
-    resp = await client.post("/student/auth/resume", files=_resume_file())
+    resp = await _upload_resume(client, monkeypatch, _resume(phone="9876500013"))
     assert resp.status_code == 200, resp.text
 
     await db.refresh(telegram_user)
@@ -104,17 +130,11 @@ async def test_signup_sets_app_seen_at_for_admin_visibility(client, db, categori
 
 
 async def test_signup_prefers_app_typed_name_over_resume_extraction(client, categories, monkeypatch):
-    monkeypatch.setattr(
-        "app.services.resume_intake.ai.parse_resume",
-        _fake_parse_resume(_resume(phone="9876500011", full_name="Resume Name")),
-    )
-    monkeypatch.setattr("app.services.resume_intake.storage.save_resume", _fake_save_resume)
-
-    resp = await client.post(
-        "/student/auth/resume", data={"full_name": "Typed Name"}, files=_resume_file()
+    resp = await _upload_resume(
+        client, monkeypatch, _resume(phone="9876500011", full_name="Resume Name"), full_name="Typed Name"
     )
     assert resp.status_code == 200, resp.text
-    assert resp.json()["user"]["full_name"] == "Typed Name"
+    assert resp.json()["full_name"] == "Typed Name"
 
 
 async def test_signup_fills_missing_name_for_recognized_telegram_user(client, db, categories, monkeypatch):
@@ -124,17 +144,11 @@ async def test_signup_fills_missing_name_for_recognized_telegram_user(client, db
     await start_trial(db, user)
     await db.commit()
 
-    monkeypatch.setattr(
-        "app.services.resume_intake.ai.parse_resume",
-        _fake_parse_resume(_resume(phone="9876500012")),
-    )
-    monkeypatch.setattr("app.services.resume_intake.storage.save_resume", _fake_save_resume)
-
-    resp = await client.post(
-        "/student/auth/resume", data={"full_name": "Filled In Name"}, files=_resume_file()
+    resp = await _upload_resume(
+        client, monkeypatch, _resume(phone="9876500012"), full_name="Filled In Name"
     )
     assert resp.status_code == 200, resp.text
-    assert resp.json()["user"]["full_name"] == "Filled In Name"
+    assert resp.json()["full_name"] == "Filled In Name"
 
 
 async def test_signup_existing_telegram_user_is_recognized_instantly(client, db, categories, monkeypatch):
@@ -144,25 +158,46 @@ async def test_signup_existing_telegram_user_is_recognized_instantly(client, db,
     await start_trial(db, user)
     await db.commit()
 
-    monkeypatch.setattr(
-        "app.services.resume_intake.ai.parse_resume",
-        _fake_parse_resume(_resume(phone="9876500002", full_name="Different Name On Resume")),
+    resp = await _upload_resume(
+        client, monkeypatch, _resume(phone="9876500002", full_name="Different Name On Resume")
     )
-    monkeypatch.setattr("app.services.resume_intake.storage.save_resume", _fake_save_resume)
-
-    resp = await client.post("/student/auth/resume", files=_resume_file())
     assert resp.status_code == 200, resp.text
     body = resp.json()
     assert body["is_new_user"] is False
-    assert body["user"]["id"] == user.id
-    assert body["next_step"] == "done"  # already active with categories
+    assert body["needs_login"] is False  # no password yet - first time using the app
+
+    # Logging in lands them straight on "done" - categories/job-types already set via Telegram.
+    resp = await client.post(
+        "/student/auth/set-password",
+        json={"password": "testpass123"},
+        headers={"Authorization": f"Bearer {body['signup_token']}"},
+    )
+    assert resp.status_code == 200, resp.text
+    resp = await client.post(
+        "/student/auth/login", json={"identifier": "+919876500002", "password": "testpass123"}
+    )
+    assert resp.status_code == 200, resp.text
+    login_body = resp.json()
+    assert login_body["user"]["id"] == user.id
+    assert login_body["next_step"] == "done"
+
+
+async def test_signup_already_has_password_returns_needs_login(client, categories, monkeypatch):
+    token = await _signup_and_login(client, monkeypatch, "9876500014")
+
+    # Re-uploading the resume must not silently offer a fresh signup_token (that would let
+    # anyone with the resume "sign up again" and get a new signup path) - it should point back
+    # to Login instead.
+    resp = await _upload_resume(client, monkeypatch, _resume(phone="9876500014"))
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["needs_login"] is True
+    assert body.get("signup_token") is None
+    assert token  # sanity: the original login token is unaffected
 
 
 async def test_signup_rejects_non_resume_file(client, categories, monkeypatch):
-    monkeypatch.setattr(
-        "app.services.resume_intake.ai.parse_resume", _fake_parse_resume(_resume(is_resume=False))
-    )
-    resp = await client.post("/student/auth/resume", files=_resume_file())
+    resp = await _upload_resume(client, monkeypatch, _resume(is_resume=False))
     assert resp.status_code == 422
 
 
@@ -174,35 +209,133 @@ async def test_signup_rejects_unsupported_file_type(client, categories):
 
 
 async def test_signup_with_no_phone_in_resume_still_creates_account(client, categories, monkeypatch):
-    monkeypatch.setattr(
-        "app.services.resume_intake.ai.parse_resume", _fake_parse_resume(_resume(phone=None))
-    )
-    monkeypatch.setattr("app.services.resume_intake.storage.save_resume", _fake_save_resume)
-
-    resp = await client.post("/student/auth/resume", files=_resume_file())
+    resp = await _upload_resume(client, monkeypatch, _resume(phone=None, email=None))
     assert resp.status_code == 200, resp.text
     body = resp.json()
     assert body["is_new_user"] is True
-    assert body["user"]["phone"] is None
+    assert body["phone"] is None
+    assert body["email"] is None
 
 
 async def test_signup_blocked_user_is_refused(client, db, monkeypatch):
     user = await make_user(db, phone="+919876500003", status="blocked")
     await db.commit()
 
-    monkeypatch.setattr(
-        "app.services.resume_intake.ai.parse_resume", _fake_parse_resume(_resume(phone="9876500003"))
+    resp = await _upload_resume(client, monkeypatch, _resume(phone="9876500003"))
+    assert resp.status_code == 403
+
+
+async def test_set_password_requires_phone_when_resume_had_neither(client, categories, monkeypatch):
+    resp = await _upload_resume(client, monkeypatch, _resume(phone=None, email=None))
+    assert resp.status_code == 200, resp.text
+    signup_token = resp.json()["signup_token"]
+    headers = {"Authorization": f"Bearer {signup_token}"}
+
+    resp = await client.post("/student/auth/set-password", json={"password": "testpass123"}, headers=headers)
+    assert resp.status_code == 400  # nothing to log in with afterward
+
+    resp = await client.post(
+        "/student/auth/set-password",
+        json={"password": "testpass123", "phone": "9876500020"},
+        headers=headers,
     )
-    resp = await client.post("/student/auth/resume", files=_resume_file())
+    assert resp.status_code == 200, resp.text
+    assert resp.json()["phone"] == "+919876500020"
+
+
+async def test_set_password_rejects_short_password(client, categories, monkeypatch):
+    resp = await _upload_resume(client, monkeypatch, _resume(phone="9876500021"))
+    signup_token = resp.json()["signup_token"]
+    resp = await client.post(
+        "/student/auth/set-password",
+        json={"password": "short"},
+        headers={"Authorization": f"Bearer {signup_token}"},
+    )
+    assert resp.status_code == 422
+
+
+async def test_set_password_rejects_a_full_access_token(client, categories, monkeypatch):
+    """The signup_token role check must be exact - a real (post-login) access_token must not
+    also work here, since that would let anyone with a normal session silently reset their own
+    password without re-proving identity via a fresh resume upload."""
+    token = await _signup_and_login(client, monkeypatch, "9876500022")
+    resp = await client.post(
+        "/student/auth/set-password",
+        json={"password": "newpassword1"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert resp.status_code == 401
+
+
+async def test_login_with_phone_and_correct_password(client, categories, monkeypatch):
+    token = await _signup_and_login(client, monkeypatch, "9876500023", password="correcthorse")
+    assert token
+
+
+async def test_login_with_email_identifier(client, categories, monkeypatch):
+    resp = await _upload_resume(client, monkeypatch, _resume(phone="9876500024", email="Student.Email@Example.com"))
+    signup_token = resp.json()["signup_token"]
+    await client.post(
+        "/student/auth/set-password",
+        json={"password": "testpass123"},
+        headers={"Authorization": f"Bearer {signup_token}"},
+    )
+    # Case-insensitive on purpose - Gemini extracts the email exactly as written in the resume.
+    resp = await client.post(
+        "/student/auth/login",
+        json={"identifier": "STUDENT.EMAIL@EXAMPLE.COM", "password": "testpass123"},
+    )
+    assert resp.status_code == 200, resp.text
+
+
+async def test_login_wrong_password_is_rejected(client, categories, monkeypatch):
+    ratelimit.reset_all()
+    await _signup_and_login(client, monkeypatch, "9876500025", password="correctpassword")
+    resp = await client.post(
+        "/student/auth/login", json={"identifier": "+919876500025", "password": "wrongpassword"}
+    )
+    assert resp.status_code == 401
+
+
+async def test_login_unknown_identifier_is_rejected(client, categories):
+    ratelimit.reset_all()
+    resp = await client.post(
+        "/student/auth/login", json={"identifier": "+919999999999", "password": "whatever1"}
+    )
+    assert resp.status_code == 401
+
+
+async def test_login_rate_limited_after_repeated_failures(client, categories, monkeypatch):
+    ratelimit.reset_all()
+    await _signup_and_login(client, monkeypatch, "9876500026", password="correctpassword")
+    for _ in range(ratelimit.MAX_FAILURES):
+        resp = await client.post(
+            "/student/auth/login", json={"identifier": "+919876500026", "password": "wrongpassword"}
+        )
+        assert resp.status_code == 401
+    resp = await client.post(
+        "/student/auth/login", json={"identifier": "+919876500026", "password": "wrongpassword"}
+    )
+    assert resp.status_code == 429
+
+
+async def test_login_blocked_user_is_refused(client, db, monkeypatch):
+    ratelimit.reset_all()
+    token = await _signup_and_login(client, monkeypatch, "9876500027", password="testpass123")
+    assert token
+    user = (await db.execute(select(User).where(User.phone == "+919876500027"))).scalar_one()
+    user.status = "blocked"
+    await db.commit()
+
+    resp = await client.post(
+        "/student/auth/login", json={"identifier": "+919876500027", "password": "testpass123"}
+    )
     assert resp.status_code == 403
 
 
 async def _signup(client, monkeypatch, phone: str | None) -> str:
-    monkeypatch.setattr("app.services.resume_intake.ai.parse_resume", _fake_parse_resume(_resume(phone=phone)))
-    monkeypatch.setattr("app.services.resume_intake.storage.save_resume", _fake_save_resume)
-    resp = await client.post("/student/auth/resume", files=_resume_file())
-    assert resp.status_code == 200, resp.text
-    return resp.json()["access_token"]
+    """Back-compat helper for tests below that just need a logged-in student token."""
+    return await _signup_and_login(client, monkeypatch, phone)
 
 
 async def test_onboarding_straight_to_complete_no_district(client, categories, monkeypatch):
@@ -226,9 +359,6 @@ async def test_onboarding_straight_to_complete_no_district(client, categories, m
 
 async def test_set_name_used_when_resume_had_none(client, categories, monkeypatch):
     token = await _signup(client, monkeypatch, "9876500005")
-    monkeypatch.setattr(
-        "app.services.resume_intake.ai.parse_resume", _fake_parse_resume(_resume(full_name=None, phone="9876500005"))
-    )
     headers = {"Authorization": f"Bearer {token}"}
     # simulate a resume with no usable name: re-signup wouldn't apply here since token already
     # exists, so exercise PUT /student/me/name directly instead.
@@ -241,31 +371,48 @@ async def test_set_name_used_when_resume_had_none(client, categories, monkeypatc
 
 
 async def test_set_phone_manual_fallback(client, categories, monkeypatch):
-    token = await _signup(client, monkeypatch, None)  # resume had no phone
-    headers = {"Authorization": f"Bearer {token}"}
-
-    resp = await client.put("/student/me/phone", json={"phone": "9876500006"}, headers=headers)
+    # phone was None in the resume and set-password required one there - PUT /student/me/phone
+    # is the separate, already-logged-in path for changing it again afterward.
+    resp = await _upload_resume(client, monkeypatch, _resume(phone=None, email=None))
+    signup_token = resp.json()["signup_token"]
+    resp = await client.post(
+        "/student/auth/set-password",
+        json={"password": "testpass123", "phone": "9876500006"},
+        headers={"Authorization": f"Bearer {signup_token}"},
+    )
     assert resp.status_code == 200, resp.text
-    assert resp.json()["user"]["phone"] == "+919876500006"
+    resp = await client.post(
+        "/student/auth/login", json={"identifier": "+919876500006", "password": "testpass123"}
+    )
+    assert resp.status_code == 200, resp.text
+    headers = {"Authorization": f"Bearer {resp.json()['access_token']}"}
+
+    resp = await client.put("/student/me/phone", json={"phone": "9876500028"}, headers=headers)
+    assert resp.status_code == 200, resp.text
+    assert resp.json()["user"]["phone"] == "+919876500028"
 
 
 async def test_set_phone_rejects_number_already_taken(client, db, categories, monkeypatch):
     other = await make_user(db, phone="+919876500007")
     await db.commit()
 
-    token = await _signup(client, monkeypatch, None)
+    token = await _signup(client, monkeypatch, "9876500029")
     headers = {"Authorization": f"Bearer {token}"}
     resp = await client.put("/student/me/phone", json={"phone": "9876500007"}, headers=headers)
     assert resp.status_code == 400
 
 
 async def test_complete_onboarding_requires_name_first(client, monkeypatch):
-    monkeypatch.setattr(
-        "app.services.resume_intake.ai.parse_resume", _fake_parse_resume(_resume(full_name=None, phone="9876500008"))
+    resp = await _upload_resume(client, monkeypatch, _resume(full_name=None, phone="9876500008"))
+    signup_token = resp.json()["signup_token"]
+    await client.post(
+        "/student/auth/set-password",
+        json={"password": "testpass123"},
+        headers={"Authorization": f"Bearer {signup_token}"},
     )
-    monkeypatch.setattr("app.services.resume_intake.storage.save_resume", _fake_save_resume)
-    resp = await client.post("/student/auth/resume", files=_resume_file())
-    assert resp.status_code == 200, resp.text
+    resp = await client.post(
+        "/student/auth/login", json={"identifier": "+919876500008", "password": "testpass123"}
+    )
     headers = {"Authorization": f"Bearer {resp.json()['access_token']}"}
 
     resp = await client.post(

@@ -9,8 +9,8 @@ export const colors = {
   ink: "#1C1C1E",
   muted: "#8E8E93",
   surface: "#FFFFFF",
-  background: "#FFFFFF",
-  line: "#E5E5EA",
+  background: "#F7F5F2",
+  line: "#E9E6E1",
   info: "#007AFF",
   danger: "#FF3B30",
 } as const;

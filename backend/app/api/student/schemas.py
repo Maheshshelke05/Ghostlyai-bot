@@ -38,6 +38,35 @@ class AuthOut(MeOut):
     suggested_category_slugs: list[str] = []
 
 
+class SignupOut(BaseModel):
+    """Response from POST /student/auth/resume. Never carries a full access_token - that's
+    only issued by POST /student/auth/login, once a password exists and is verified."""
+    is_new_user: bool
+    needs_login: bool  # account already has a password - app should show Login, not set-password
+    signup_token: Optional[str] = None  # present only when needs_login is False
+    full_name: Optional[str] = None
+    phone: Optional[str] = None
+    email: Optional[str] = None
+    suggested_category_slugs: list[str] = []
+
+
+class SetPasswordIn(BaseModel):
+    password: str = Field(min_length=8, max_length=72)  # 72 bytes is bcrypt's own hard limit
+    # Only used (and only required) when the resume had neither a phone nor an email - without
+    # at least one of those, there would be nothing to log in with afterward.
+    phone: Optional[str] = Field(default=None, min_length=10, max_length=20)
+
+
+class SetPasswordOut(BaseModel):
+    phone: Optional[str] = None
+    email: Optional[str] = None
+
+
+class LoginIn(BaseModel):
+    identifier: str = Field(min_length=3, max_length=160)  # phone or email
+    password: str = Field(min_length=1, max_length=72)
+
+
 class PushTokenIn(BaseModel):
     token: Optional[str] = Field(default=None, max_length=200)
 

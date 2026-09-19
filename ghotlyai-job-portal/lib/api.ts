@@ -96,6 +96,21 @@ export interface AuthOut extends MeOut {
   suggested_category_slugs: string[];
 }
 
+export interface SignupOut {
+  is_new_user: boolean;
+  needs_login: boolean;
+  signup_token: string | null;
+  full_name: string | null;
+  phone: string | null;
+  email: string | null;
+  suggested_category_slugs: string[];
+}
+
+export interface SetPasswordOut {
+  phone: string | null;
+  email: string | null;
+}
+
 export interface CategoryOut {
   id: number;
   slug: string;
@@ -167,9 +182,23 @@ export async function signupWithResume(
   const form = new FormData();
   form.append("file", { uri: file.uri, name: file.name, type: file.mimeType || "application/pdf" } as any);
   if (fullName) form.append("full_name", fullName);
-  const { data } = await apiClient.post<AuthOut>("/student/auth/resume", form, {
+  const { data } = await apiClient.post<SignupOut>("/student/auth/resume", form, {
     headers: { "Content-Type": "multipart/form-data" },
   });
+  return data;
+}
+
+export async function setPassword(signupToken: string, password: string, phone?: string) {
+  const { data } = await apiClient.post<SetPasswordOut>(
+    "/student/auth/set-password",
+    { password, phone },
+    { headers: { Authorization: `Bearer ${signupToken}` } }
+  );
+  return data;
+}
+
+export async function login(identifier: string, password: string) {
+  const { data } = await apiClient.post<AuthOut>("/student/auth/login", { identifier, password });
   return data;
 }
 
