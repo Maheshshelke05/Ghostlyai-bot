@@ -4,18 +4,19 @@ module.exports = {
   presets: [require("nativewind/preset")],
   theme: {
     extend: {
-      // JobKatta brand: a fresh green identity distinct from the admin app's orange, on the
-      // same neutral iOS-system base so both apps share a visual "family" without twinning.
+      // Same GhotlyAI brand as the admin app (ghost mascot + orange), on a white-forward
+      // background per an explicit request to keep the app's own screens clean/white while
+      // the app icon keeps the recognizable orange ghost mark.
       colors: {
-        brand: "#16A34A",
+        brand: "#EA580C",
         "brand-ink": "#FFFFFF",
-        "brand-soft": "#ECFDF3",
+        "brand-soft": "#FFF1E8",
         accent: "#F59E0B",
         "accent-soft": "#FFFBEB",
         ink: "#1C1C1E",
         muted: "#8E8E93",
         surface: "#FFFFFF",
-        background: "#F2F2F7",
+        background: "#FFFFFF",
         line: "#E5E5EA",
         info: "#007AFF",
         danger: "#FF3B30",

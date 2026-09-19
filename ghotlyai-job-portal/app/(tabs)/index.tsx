@@ -40,7 +40,7 @@ export default function HomeScreen() {
   return (
     <SafeAreaView className="flex-1 bg-background" edges={["top"]}>
       <View className="px-4 pt-2 pb-3 bg-background">
-        <Text className="font-display text-ink text-[24px] mb-3">JobKatta</Text>
+        <Text className="font-display text-ink text-[24px] mb-3">GhotlyAI</Text>
         <View className="flex-row items-center gap-2">
           <SearchBar value={query} onChangeText={setQuery} placeholder="Search jobs, companies..." />
           <Pressable

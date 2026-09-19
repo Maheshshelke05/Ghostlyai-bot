@@ -24,13 +24,13 @@ export default function CheckoutScreen() {
         amount: order.amount,
         currency: order.currency,
         order_id: order.order_id,
-        name: "JobKatta",
+        name: "GhotlyAI Job Portal",
         description: "Job alerts subscription",
         prefill: {
           contact: user?.phone?.replace("+91", "") ?? "",
           name: user?.full_name ?? "",
         },
-        theme: { color: "#16A34A" },
+        theme: { color: "#EA580C" },
       });
 
       await verifyPayment({
@@ -56,7 +56,7 @@ export default function CheckoutScreen() {
   return (
     <SafeAreaView className="flex-1 bg-background px-6" edges={["bottom"]}>
       <View className="flex-1 justify-center">
-        <Text className="font-display text-ink text-[24px] mb-2 text-center">Subscribe to JobKatta</Text>
+        <Text className="font-display text-ink text-[24px] mb-2 text-center">Subscribe to GhotlyAI</Text>
         <Text className="font-body text-muted text-[15px] text-center mb-8">
           ₹99 for 30 days of job alerts in your chosen categories.
         </Text>

@@ -1,12 +1,14 @@
-# JobKatta — Student Job Alert App
+# GhotlyAI Job Portal — Student Job Alert App
 
 Expo/TypeScript app giving students the same functionality as the Telegram bot (onboarding,
 job feed, payment, support), talking to the **same backend** as the bot via new `/student/*`
 API routes (see `backend/app/api/student/`). No second backend — same database, same business
 logic.
 
-Placeholder name/branding (`JobKatta`, green `#16A34A`) — trivially renamed by editing
-`app.json`, `package.json` and `tailwind.config.js`.
+Same GhotlyAI brand as the admin app (ghost mascot, orange `#EA580C` accent), on a white-forward
+in-app background. Internal identifiers (`slug`/`scheme` in `app.json`, npm package name) stay
+`jobkatta` since they're tied to the already-created EAS project — only user-facing text/colors
+changed.
 
 ## Getting an installable APK
 

@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "JobKatta",
+    "name": "GhotlyAI Job Portal",
     "slug": "jobkatta",
     "scheme": "jobkatta",
     "version": "1.0.0",
@@ -16,7 +16,7 @@
       "package": "com.jobalertbot.student",
       "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
-        "backgroundColor": "#16A34A",
+        "backgroundColor": "#EA580C",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
@@ -33,16 +33,16 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/splash-icon.png",
-          "backgroundColor": "#16A34A",
-          "imageWidth": 200
+          "image": "./assets/splash-ghost.png",
+          "backgroundColor": "#FFFFFF",
+          "imageWidth": 220
         }
       ],
       "expo-secure-store",
       [
         "expo-image-picker",
         {
-          "photosPermission": "JobKatta needs access to your photos so you can upload a resume image.",
+          "photosPermission": "GhotlyAI Job Portal needs access to your photos so you can upload a resume image.",
           "cameraPermission": false,
           "microphonePermission": false
         }
@@ -51,7 +51,7 @@
       [
         "expo-notifications",
         {
-          "color": "#16A34A"
+          "color": "#EA580C"
         }
       ],
       "@react-native-firebase/app",

@@ -20,10 +20,10 @@ export async function registerForPushNotificationsAsync(): Promise<string | null
   try {
     if (Platform.OS === "android") {
       await Notifications.setNotificationChannelAsync("default", {
-        name: "JobKatta",
+        name: "GhotlyAI Job Portal",
         importance: Notifications.AndroidImportance.HIGH,
         vibrationPattern: [0, 250, 250, 250],
-        lightColor: "#16A34A",
+        lightColor: "#EA580C",
       });
     }
 

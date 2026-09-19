@@ -50,10 +50,10 @@ export default function RootLayout() {
                 headerShown: false,
                 headerStyle: { backgroundColor: "#FFFFFF" },
                 headerShadowVisible: false,
-                headerTintColor: "#16A34A",
+                headerTintColor: "#EA580C",
                 headerTitleStyle: { fontWeight: "600", fontSize: 17, color: "#1C1C1E" },
                 headerBackButtonDisplayMode: "minimal",
-                contentStyle: { backgroundColor: "#F2F2F7" },
+                contentStyle: { backgroundColor: "#FFFFFF" },
               }}
             >
               <Stack.Protected guard={onboarded}>

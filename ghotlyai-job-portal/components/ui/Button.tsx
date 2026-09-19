@@ -23,8 +23,8 @@ const VARIANT_TEXT_CLASSES: Record<Variant, string> = {
 
 const SPINNER_COLOR: Record<Variant, string> = {
   primary: "#FFFFFF",
-  brand: "#16A34A",
-  ghost: "#16A34A",
+  brand: "#EA580C",
+  ghost: "#EA580C",
   danger: "#FF3B30",
 };
 
