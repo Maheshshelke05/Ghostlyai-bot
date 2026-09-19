@@ -1,6 +1,6 @@
-"""Onboarding endpoints for the student app: name -> district -> complete (categories + job
-types) - mirrors backend/app/bot/handlers/onboarding.py step-by-step, one API-friendly step at
-a time instead of aiogram's FSM. Resume upload itself now happens at signup
+"""Onboarding endpoints for the student app: name -> complete (categories + job types). The app
+does not collect district at all (unlike the Telegram bot) - matching never used it (see
+CLAUDE.md BUSINESS RULES). Resume upload itself happens at signup
 (app/api/student/auth.py::signup_with_resume); this router keeps the authenticated re-upload
 endpoint for updating it later.
 """
@@ -14,7 +14,6 @@ from app.api.student.auth import next_step, to_out
 from app.api.student.deps import current_student
 from app.api.student.schemas import (
     CompleteOnboardingIn,
-    DistrictIn,
     MeOut,
     NameIn,
     PhoneIn,
@@ -24,7 +23,6 @@ from app.api.student.schemas import (
 from app.db.models import Category, User, UserCategory
 from app.db.session import get_db
 from app.services.access import get_setting, start_trial
-from app.services.districts import canonical_district
 from app.services.jobs import JOB_TYPES
 from app.services.push import send_push_to_admins
 from app.services.resume_intake import (
@@ -45,17 +43,6 @@ async def set_name(
     if not valid_name(text):
         raise HTTPException(status_code=400, detail="Enter your full name (first and last name)")
     user.full_name = normalize_name(text)
-    await db.flush()
-    return MeOut(user=to_out(user), next_step=next_step(user))
-
-
-@router.put("/district", response_model=MeOut)
-async def set_district(
-    payload: DistrictIn, user: User = Depends(current_student), db: AsyncSession = Depends(get_db)
-) -> MeOut:
-    text = payload.district.strip()
-    canon = canonical_district(text)
-    user.district = canon if canon else text.title()[:60]
     await db.flush()
     return MeOut(user=to_out(user), next_step=next_step(user))
 
@@ -106,8 +93,6 @@ async def complete_onboarding(
 ) -> MeOut:
     if not user.full_name:
         raise HTTPException(status_code=400, detail="Name is required first")
-    if not user.district:
-        raise HTTPException(status_code=400, detail="District is required first")
 
     max_categories = int(await get_setting(db, "max_categories", 3))
     if not (1 <= len(payload.category_ids) <= max_categories):

@@ -1,15 +1,13 @@
-"""Twice-daily digest + locked teasers for expired users (Chapter 10.2, 18)."""
+"""Frequent-interval digest + locked teasers for expired users (Chapter 10.2, 18)."""
 from __future__ import annotations
 
 import logging
-from datetime import datetime
 
 from sqlalchemy import select
 
 from app.bot.keyboards import subscribe_cta_kb
 from app.bot.loader import get_bot
 from app.bot.texts import t
-from app.config import settings as app_config
 from app.db.models import User, utcnow
 from app.db.session import session_scope
 from app.services.access import get_all_settings, has_access, in_trial
@@ -22,27 +20,11 @@ _BATCH_SIZE = 500
 
 
 async def digest_tick() -> None:
-    """Runs every minute; triggers run_digest() at most once per configured HH:MM slot."""
+    """Runs on a frequent fixed interval (see scheduler.py) so a newly posted job reaches
+    matching Telegram users within minutes, not just at fixed daily slots. `max_instances=1` on
+    the scheduler job (not this function) is what prevents overlapping runs if one takes longer
+    than the interval."""
     try:
-        now = datetime.now(app_config.tz)
-        slot = now.strftime("%H:%M")
-
-        async with session_scope() as db:
-            settings_map = await get_all_settings(db)
-            digest_times = settings_map.get("digest_times", [])
-            if slot not in digest_times:
-                return
-
-            slot_key = f"{now.date().isoformat()} {slot}"
-            last_slot = settings_map.get("last_digest_slot")
-            if last_slot == slot_key:
-                return
-
-            from app.services.access import update_settings
-
-            await update_settings(db, {"last_digest_slot": slot_key})
-            await db.commit()
-
         await run_digest()
     except Exception:  # noqa: BLE001
         logger.exception("digest_tick failed")

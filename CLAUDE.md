@@ -14,9 +14,11 @@ source of truth for engineering.
 - After onboarding they get a 3-day free trial, then pay Rs 99 for 30 days via **Razorpay Payment
   Links**.
 - Admin uploads 500+ jobs per day from an **Admin Android app** (React Native + Expo).
-- Twice a day (09:00 and 18:00 IST) a worker sends each student a digest of NEW jobs that match
-  their categories, job types and district. Apply buttons go through a signed click-tracking
-  redirect.
+- A worker checks every 2 minutes and sends each student a digest of NEW jobs that match their
+  categories and job types, so a newly posted job reaches students within minutes (both Telegram
+  and the app; formerly a fixed twice-daily 09:00/18:00 Telegram slot - changed 2026-09).
+  Apply buttons go through a signed click-tracking redirect. Matching no longer considers
+  district (the product isn't Maharashtra-only) - see BUSINESS RULES.
 - Bot languages: Marathi (default), Hindi, English. All bot copy lives in one texts file.
 - This is a JOB ALERT service, never a job guarantee. Only verified jobs with official apply links.
 
@@ -57,8 +59,7 @@ payments(id, user_id, subscription_id, reference_id unique, razorpay_link_id uni
          razorpay_payment_id, short_url, amount_paise, status created|paid|expired, expires_at,
          paid_at, created_at)
 app_settings(key pk, value jsonb): price_inr=99, subscription_days=30, trial_days=3,
-             digest_times=["09:00","18:00"], digest_max_jobs=10, max_categories=3,
-             teaser_every_hours=48
+             digest_max_jobs=10, max_categories=3, teaser_every_hours=48
 broadcasts(id, admin_id, text, audience, category_id, total, sent, failed, status, created_at)
 ```
 
@@ -68,14 +69,16 @@ broadcasts(id, admin_id, text, audience, category_id, total, sent, failed, statu
 - Extending a subscription adds days after the current paid end if it is in the future, else from
   now.
 - Matching: `job.status='active'` AND category in user's categories AND (user.job_types empty OR
-  job.job_type in user.job_types) AND (job.district IS NULL OR job.job_type='wfh' OR
-  job.district = user.district) AND (last_date IS NULL OR last_date >= today IST) AND created
-  within last 7 days AND not already in job_deliveries for this user. Newest first.
+  job.job_type in user.job_types) AND (last_date IS NULL OR last_date >= today IST) AND created
+  within last 7 days AND not already in job_deliveries for this user. Newest first. District plays
+  no part in matching (product is not Maharashtra-only).
 - Digest: max 10 jobs, 5 jobs per Telegram message, ~20 messages/sec, handle RetryAfter,
-  Forbidden -> mark user bot_blocked. Delete delivery rows if nothing was sent.
+  Forbidden -> mark user bot_blocked. Delete delivery rows if nothing was sent. Runs on a
+  frequent interval (every 2 minutes), not fixed daily slots.
 - Expired users get a locked teaser with match count at most once per 48h.
 - Payment webhook must be idempotent, verify signature and full amount.
-- Districts are canonical (35 Maharashtra districts, new names, aliases for old names/Devanagari).
+- The Telegram bot still collects/validates district (35 Maharashtra districts, new names,
+  aliases for old names/Devanagari) - the student app does not collect district at all.
 - All user-provided text inserted in HTML messages must be `html.escape()`'d.
 - Datetimes stored as timezone-aware UTC; displayed in IST (DD-MM-YYYY).
 - Category slugs never change (matching + Excel upload depend on them); 21 seeded categories.

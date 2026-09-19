@@ -62,7 +62,7 @@ export default function CategoriesScreen() {
   return (
     <SafeAreaView className="flex-1 bg-background px-6" edges={["top", "bottom"]}>
       <View className="flex-1 pt-4">
-        <OnboardingProgress step={4} />
+        <OnboardingProgress step={2} />
         <Text className="font-display text-ink text-[26px] mb-2">Pick your job categories</Text>
         <Text className="font-body text-muted text-[15px] mb-6">
           Choose up to {maxCategories}. We'll only alert you for these.

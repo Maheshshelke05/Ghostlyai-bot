@@ -6,10 +6,18 @@ whatever a user types - this app just gets its identity fields from a document i
 chat). If the extracted phone already belongs to an existing Telegram-bot user, that account is
 reused as-is (their existing profile is trusted) - otherwise a new app-only User row is created
 (telegram_id=None) and the normal onboarding steps follow.
+
+The app collects the student's name itself (a screen before the resume upload) rather than
+relying only on what Gemini extracts, since a self-typed name is more reliable and lets the app
+show it immediately without waiting on parsing - `full_name` here is that user-typed value and
+takes priority over the resume's own extraction (but never overwrites an existing, already-named
+account recognized by phone).
 """
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile
+from typing import Optional
+
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -36,14 +44,13 @@ _STUDENT_TOKEN_HOURS = 24 * 30
 
 def next_step(user: User) -> str:
     """Mirrors the completeness check in bot/handlers/onboarding.py::cmd_start, plus the
-    app-only steps (name, district) that come before the shared categories/job-types flow,
-    which the app completes in one local session ending in POST /student/me/complete."""
+    app-only name step that comes before the shared categories/job-types flow (the app does
+    not collect district at all), which the app completes in one local session ending in
+    POST /student/me/complete."""
     if user.status == "active" and user.category_links:
         return "done"
     if not user.full_name:
         return "name"
-    if not user.district:
-        return "district"
     return "profile"
 
 
@@ -54,7 +61,6 @@ def to_out(user: User) -> StudentOut:
         full_name=user.full_name,
         phone=user.phone,
         email=user.email,
-        district=user.district,
         language=user.language,
         job_types=user.job_types,
         status=user.status,
@@ -67,7 +73,10 @@ def to_out(user: User) -> StudentOut:
 
 @router.post("/resume", response_model=AuthOut)
 async def signup_with_resume(
-    request: Request, file: UploadFile = File(...), db: AsyncSession = Depends(get_db)
+    request: Request,
+    file: UploadFile = File(...),
+    full_name: Optional[str] = Form(default=None, max_length=80),
+    db: AsyncSession = Depends(get_db),
 ) -> AuthOut:
     # Unauthenticated by design (this IS signup) and every attempt costs a real Gemini call
     # regardless of outcome, so cap attempts per IP - otherwise anyone can spam this for free
@@ -90,17 +99,22 @@ async def signup_with_resume(
     if phone:
         user = (await db.execute(select(User).where(User.phone == phone))).scalar_one_or_none()
 
+    chosen_name = None
+    if full_name and valid_name(full_name.strip()):
+        chosen_name = normalize_name(full_name.strip())
+    elif result.full_name and valid_name(result.full_name):
+        chosen_name = normalize_name(result.full_name)
+
     is_new_user = user is None
     if user is None:
-        full_name = None
-        if result.full_name and valid_name(result.full_name):
-            full_name = normalize_name(result.full_name)
-        user = User(phone=phone, telegram_id=None, full_name=full_name, status="onboarding", language="mr")
+        user = User(phone=phone, telegram_id=None, full_name=chosen_name, status="onboarding", language="mr")
         db.add(user)
         await db.flush()
         await db.refresh(user, attribute_names=["category_links", "subscriptions", "profile"])
     elif user.status == "blocked":
         raise HTTPException(status_code=403, detail="This account has been blocked")
+    elif not user.full_name and chosen_name:
+        user.full_name = chosen_name
 
     await apply_resume_to_user(db, user, data, resolved_mime, filename, result)
 

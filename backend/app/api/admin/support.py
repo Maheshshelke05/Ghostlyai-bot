@@ -1,9 +1,11 @@
 """Support inbox: student help messages and admin replies."""
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import FileResponse, RedirectResponse
 from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -16,6 +18,7 @@ from app.db.session import get_db
 from app.services.access import reactivate_if_bot_blocked
 from app.services.notifier import safe_send
 from app.services.push import send_push_to_student
+from app.services.storage import get_support_image_url
 
 router = APIRouter(prefix="/admin/support", tags=["admin-support"])
 
@@ -124,12 +127,31 @@ async def get_thread(
         },
         "messages": [
             {
-                "id": m.id, "direction": m.direction, "text": m.text,
+                "id": m.id, "direction": m.direction, "subject": m.subject, "text": m.text,
+                "image_url": f"/admin/support/image/{m.id}" if m.image_path else None,
                 "created_at": m.created_at.isoformat(),
             }
             for m in messages
         ],
     }
+
+
+@router.get("/image/{message_id}")
+async def get_message_image(
+    message_id: int, db: AsyncSession = Depends(get_db), _admin=Depends(owner_only)
+):
+    message = await db.get(SupportMessage, message_id)
+    if message is None or not message.image_path:
+        raise HTTPException(status_code=404, detail="Image not found")
+
+    signed_url = await get_support_image_url(message.image_path)
+    if signed_url is not None:
+        return RedirectResponse(signed_url)
+
+    path = Path(message.image_path)
+    if not path.exists():
+        raise HTTPException(status_code=404, detail="Image file not found")
+    return FileResponse(path)
 
 
 @router.post("/{user_id}/reply")

@@ -23,7 +23,11 @@ interface AuthState {
   user: StudentOut | null;
   nextStep: NextStep | null;
   hydrated: boolean;
-  signupWithResume: (file: { uri: string; name: string; mimeType?: string }) => Promise<AuthOut>;
+  signupWithResume: (
+    file: { uri: string; name: string; mimeType?: string },
+    fullName?: string
+  ) => Promise<AuthOut>;
+  commitAuth: (accessToken: string, me: { user: StudentOut; next_step: NextStep }) => void;
   logout: () => void;
   refreshMe: () => Promise<void>;
   applyMe: (me: { user: StudentOut; next_step: NextStep }) => void;
@@ -38,11 +42,19 @@ export const useAuthStore = create<AuthState>()(
       nextStep: null,
       hydrated: false,
 
-      signupWithResume: async (file) => {
-        const result = await apiSignupWithResume(file);
+      // Deliberately does NOT commit to the persisted store - the resume upload screen holds
+      // the result while the "creating your profile" animation plays (and fills in a missing
+      // phone number if needed), then calls commitAuth() once that's done. Committing here
+      // would flip the root layout's Stack.Protected guards immediately, skipping the animation.
+      signupWithResume: async (file, fullName) => {
+        const result = await apiSignupWithResume(file, fullName);
         setAuthToken(result.access_token);
-        set({ token: result.access_token, user: result.user, nextStep: result.next_step });
         return result;
+      },
+
+      commitAuth: (accessToken, me) => {
+        setAuthToken(accessToken);
+        set({ token: accessToken, user: me.user, nextStep: me.next_step });
       },
 
       logout: () => {

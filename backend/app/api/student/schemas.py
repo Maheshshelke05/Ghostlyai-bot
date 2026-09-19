@@ -15,7 +15,6 @@ class StudentOut(BaseModel):
     full_name: Optional[str] = None
     phone: Optional[str] = None
     email: Optional[str] = None
-    district: Optional[str] = None
     language: str
     job_types: list[str] = []
     status: str
@@ -29,7 +28,7 @@ class StudentOut(BaseModel):
 
 class MeOut(BaseModel):
     user: StudentOut
-    next_step: str  # name | district | profile | done
+    next_step: str  # name | profile | done
 
 
 class AuthOut(MeOut):
@@ -48,10 +47,6 @@ class PushTokenIn(BaseModel):
 # ---------------------------------------------------------------------------
 class NameIn(BaseModel):
     full_name: str = Field(min_length=1, max_length=80)
-
-
-class DistrictIn(BaseModel):
-    district: str = Field(min_length=1, max_length=60)
 
 
 class PhoneIn(BaseModel):
@@ -136,14 +131,12 @@ class PaymentVerifiedOut(BaseModel):
 # ---------------------------------------------------------------------------
 # Support
 # ---------------------------------------------------------------------------
-class SupportMessageIn(BaseModel):
-    text: str = Field(min_length=5, max_length=1000)
-
-
 class SupportMessageOut(BaseModel):
     id: int
     direction: str  # in | out
+    subject: Optional[str] = None
     text: str
+    image_url: Optional[str] = None
     created_at: str
 
 

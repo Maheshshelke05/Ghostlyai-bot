@@ -167,3 +167,66 @@ async def delete_resume(user_id: int, resume_path: Optional[str]) -> None:
         await asyncio.to_thread(_delete_cloudinary_sync, public_id)
     else:
         await asyncio.to_thread(_delete_local_sync, user_id)
+
+
+# ---------------------------------------------------------------------------
+# Support message image attachments - separate namespace from resumes (one file per
+# message, not one per user; resource_type="image" not "raw"), same authenticated/signed-URL
+# treatment since a screenshot can carry personal info same as a resume.
+# ---------------------------------------------------------------------------
+_IMAGE_MIMES = {"image/jpeg", "image/png", "image/webp"}
+
+
+def is_supported_image_mime(mime: str) -> bool:
+    return mime in _IMAGE_MIMES
+
+
+def _support_image_dir() -> Path:
+    return Path(settings.UPLOAD_DIR) / "support"
+
+
+def _local_support_image_path(message_id: int, ext: str) -> Path:
+    return _support_image_dir() / f"{message_id}.{ext}"
+
+
+def _cloudinary_support_public_id(message_id: int, ext: str) -> str:
+    return f"support/{message_id}.{ext}"
+
+
+def _upload_support_image_cloudinary_sync(message_id: int, data: bytes, ext: str) -> str:
+    import cloudinary.uploader
+
+    public_id = _cloudinary_support_public_id(message_id, ext)
+    cloudinary.uploader.upload(
+        io.BytesIO(data), public_id=public_id, resource_type="image",
+        type="authenticated", overwrite=True, invalidate=True,
+    )
+    return f"{_CLOUDINARY_PREFIX}{public_id}"
+
+
+def _signed_support_image_url_sync(public_id: str) -> str:
+    import cloudinary.utils
+
+    url, _options = cloudinary.utils.cloudinary_url(
+        public_id, resource_type="image", type="authenticated", sign_url=True, secure=True,
+    )
+    return url
+
+
+async def save_support_image(message_id: int, data: bytes, mime: str) -> str:
+    """Saves a support-message image and returns the path to store on the message row."""
+    ext = extension_for(mime)
+    if cloudinary_configured():
+        return await asyncio.to_thread(_upload_support_image_cloudinary_sync, message_id, data, ext)
+    path = _local_support_image_path(message_id, ext)
+    await asyncio.to_thread(_write_local_sync, path, data)
+    return str(path)
+
+
+async def get_support_image_url(image_path: str) -> Optional[str]:
+    """A signed URL for a Cloudinary-stored image, or None for a local file (the caller
+    should serve local files directly instead)."""
+    public_id = parse_resume_path(image_path)
+    if public_id is None:
+        return None
+    return await asyncio.to_thread(_signed_support_image_url_sync, public_id)

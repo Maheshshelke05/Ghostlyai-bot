@@ -354,6 +354,8 @@ class SupportMessage(Base):
     )
     direction: Mapped[str] = mapped_column(String(3), nullable=False)  # in | out
     text: Mapped[str] = mapped_column(Text, nullable=False)
+    subject: Mapped[Optional[str]] = mapped_column(String(120))
+    image_path: Mapped[Optional[str]] = mapped_column(String(300))
     created_at: Mapped[datetime] = mapped_column(TZDateTime, nullable=False, default=utcnow)
 
     user: Mapped["User"] = relationship()

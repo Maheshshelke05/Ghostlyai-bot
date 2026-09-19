@@ -2,21 +2,36 @@
  * even while the app is fully closed. Requires a Firebase project wired up for Android
  * (google-services.json) - until that's in place, permission requests still work but
  * `getExpoPushTokenAsync` fails, which this treats as "no token" rather than a crash.
+ *
+ * `expo-notifications` is loaded via `require()` inside a try/catch rather than a static
+ * `import` - Metro hoists ES imports above everything else in the module, including a
+ * try/catch, and the module itself throws synchronously on evaluation in Expo Go on Android
+ * (SDK 53+ dropped remote push support there), which would otherwise crash the whole app on
+ * startup. A real dev/production build (where push actually works) is unaffected.
  */
 import Constants from "expo-constants";
-import * as Notifications from "expo-notifications";
 import { Platform } from "react-native";
 
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowBanner: true,
-    shouldShowList: true,
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-  }),
-});
+type NotificationsModule = typeof import("expo-notifications");
+
+let Notifications: NotificationsModule | null = null;
+try {
+  Notifications = require("expo-notifications");
+  Notifications?.setNotificationHandler({
+    handleNotification: async () => ({
+      shouldShowBanner: true,
+      shouldShowList: true,
+      shouldPlaySound: true,
+      shouldSetBadge: false,
+    }),
+  });
+} catch (err) {
+  console.warn("Push notifications unavailable in this runtime", err);
+  Notifications = null;
+}
 
 export async function registerForPushNotificationsAsync(): Promise<string | null> {
+  if (!Notifications) return null;
   try {
     if (Platform.OS === "android") {
       await Notifications.setNotificationChannelAsync("default", {

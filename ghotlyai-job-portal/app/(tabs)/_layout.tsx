@@ -21,8 +21,8 @@ export default function TabsLayout() {
         options={{ title: "Home", tabBarIcon: () => <TabIcon emoji="🏠" /> }}
       />
       <Tabs.Screen
-        name="support/index"
-        options={{ title: "Support", tabBarIcon: () => <TabIcon emoji="💬" /> }}
+        name="subscription/index"
+        options={{ title: "Subscription", tabBarIcon: () => <TabIcon emoji="💳" /> }}
       />
       <Tabs.Screen
         name="profile/index"

@@ -118,24 +118,10 @@ class SettingsIn(BaseModel):
     price_inr: Optional[int] = Field(default=None, gt=0)
     subscription_days: Optional[int] = Field(default=None, gt=0)
     trial_days: Optional[int] = Field(default=None, ge=0)
-    digest_times: Optional[list[str]] = None
     digest_max_jobs: Optional[int] = Field(default=None, gt=0, le=50)
     max_categories: Optional[int] = Field(default=None, gt=0, le=10)
     teaser_every_hours: Optional[int] = Field(default=None, gt=0)
     job_delay_minutes: Optional[int] = Field(default=None, ge=0, le=1440)
-
-    @field_validator("digest_times")
-    @classmethod
-    def _validate_times(cls, value: Optional[list[str]]) -> Optional[list[str]]:
-        if value is None:
-            return value
-        import re
-
-        pattern = re.compile(r"^([01]\d|2[0-3]):[0-5]\d$")
-        for item in value:
-            if not pattern.match(item):
-                raise ValueError(f"invalid HH:MM time: {item!r}")
-        return sorted(set(value))
 
 
 # ---------------------------------------------------------------------------

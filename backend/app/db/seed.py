@@ -40,11 +40,9 @@ DEFAULT_SETTINGS: dict[str, object] = {
     "price_inr": 99,
     "subscription_days": 30,
     "trial_days": 3,
-    "digest_times": ["09:00", "18:00"],
     "digest_max_jobs": 10,
     "max_categories": 3,
     "teaser_every_hours": 48,
-    "last_digest_slot": None,
 }
 
 

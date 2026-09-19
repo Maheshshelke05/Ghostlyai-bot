@@ -73,7 +73,6 @@ export interface StudentOut {
   full_name: string | null;
   phone: string | null;
   email: string | null;
-  district: string | null;
   language: string;
   job_types: string[];
   status: "onboarding" | "active" | "blocked" | "bot_blocked";
@@ -83,7 +82,7 @@ export interface StudentOut {
   access_until: string | null;
 }
 
-export type NextStep = "name" | "district" | "profile" | "done";
+export type NextStep = "name" | "profile" | "done";
 
 export interface MeOut {
   user: StudentOut;
@@ -146,23 +145,28 @@ export interface JobListOut {
 export interface JobFilters {
   category_id?: number;
   job_type?: JobType;
-  district?: string;
   q?: string;
 }
 
 export interface SupportMessageOut {
   id: number;
   direction: "in" | "out";
+  subject: string | null;
   text: string;
+  image_url: string | null;
   created_at: string;
 }
 
 // ---------------------------------------------------------------------------
 // Auth
 // ---------------------------------------------------------------------------
-export async function signupWithResume(file: { uri: string; name: string; mimeType?: string }) {
+export async function signupWithResume(
+  file: { uri: string; name: string; mimeType?: string },
+  fullName?: string
+) {
   const form = new FormData();
   form.append("file", { uri: file.uri, name: file.name, type: file.mimeType || "application/pdf" } as any);
+  if (fullName) form.append("full_name", fullName);
   const { data } = await apiClient.post<AuthOut>("/student/auth/resume", form, {
     headers: { "Content-Type": "multipart/form-data" },
   });
@@ -183,11 +187,6 @@ export async function setPushToken(token: string | null) {
 // ---------------------------------------------------------------------------
 export async function setName(fullName: string) {
   const { data } = await apiClient.put<MeOut>("/student/me/name", { full_name: fullName });
-  return data;
-}
-
-export async function setDistrict(district: string) {
-  const { data } = await apiClient.put<MeOut>("/student/me/district", { district });
   return data;
 }
 
@@ -218,11 +217,6 @@ export async function completeOnboarding(categoryIds: number[], jobTypes: JobTyp
 // ---------------------------------------------------------------------------
 export async function getCategories(lang: string = "mr") {
   const { data } = await apiClient.get<CategoryOut[]>("/student/categories", { params: { lang } });
-  return data;
-}
-
-export async function getDistricts() {
-  const { data } = await apiClient.get<{ districts: string[]; top: string[] }>("/student/districts");
   return data;
 }
 
@@ -278,7 +272,19 @@ export async function getSupportThread() {
   return data.messages;
 }
 
-export async function sendSupportMessage(text: string) {
-  const { data } = await apiClient.post<SupportMessageOut>("/student/support", { text });
+export async function sendSupportMessage(
+  text: string,
+  subject?: string,
+  image?: { uri: string; name: string; mimeType?: string }
+) {
+  const form = new FormData();
+  form.append("text", text);
+  if (subject) form.append("subject", subject);
+  if (image) {
+    form.append("image", { uri: image.uri, name: image.name, type: image.mimeType || "image/jpeg" } as any);
+  }
+  const { data } = await apiClient.post<SupportMessageOut>("/student/support", form, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
   return data;
 }

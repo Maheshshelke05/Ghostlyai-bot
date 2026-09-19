@@ -204,7 +204,6 @@ export interface SettingsData {
   price_inr: number;
   subscription_days: number;
   trial_days: number;
-  digest_times: string[];
   digest_max_jobs: number;
   max_categories: number;
   teaser_every_hours: number;

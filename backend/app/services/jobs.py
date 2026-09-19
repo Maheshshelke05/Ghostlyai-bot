@@ -179,7 +179,6 @@ def browse_jobs_stmt(
     *,
     category_id: Optional[int] = None,
     job_type: Optional[str] = None,
-    district: Optional[str] = None,
     q: Optional[str] = None,
     days_window: int = 7,
     before_created_at: Optional[datetime] = None,
@@ -193,7 +192,8 @@ def browse_jobs_stmt(
     should keep showing jobs they've already seen, unlike a one-shot digest. Supports the
     home screen's search box and filter button as explicit overrides/narrowing on top of the
     student's own saved categories (this never lets a student browse outside the categories
-    they picked - that's the product's subscription boundary, not just a UI default).
+    they picked - that's the product's subscription boundary, not just a UI default). No
+    district filter - matching never used district (see CLAUDE.md BUSINESS RULES).
     """
     now = utcnow()
     since = now - timedelta(days=days_window)
@@ -216,9 +216,6 @@ def browse_jobs_stmt(
         conditions.append(Job.job_type == job_type)
     elif user.job_types:
         conditions.append(Job.job_type.in_(user.job_types))
-
-    if district:
-        conditions.append(or_(Job.district.is_(None), Job.district == district, Job.job_type == "wfh"))
 
     if q:
         like = f"%{q.strip()}%"

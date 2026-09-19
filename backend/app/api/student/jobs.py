@@ -61,7 +61,6 @@ def _to_out(job: Job, delivery: JobDelivery) -> JobOut:
 async def browse_jobs(
     category_id: Optional[int] = None,
     job_type: Optional[str] = None,
-    district: Optional[str] = None,
     q: Optional[str] = Query(default=None, max_length=100),
     cursor: Optional[str] = None,
     limit: int = Query(default=DEFAULT_LIMIT, le=MAX_LIMIT, gt=0),
@@ -82,7 +81,6 @@ async def browse_jobs(
         user,
         category_id=category_id,
         job_type=job_type,
-        district=district,
         q=q,
         before_created_at=before_created_at,
         before_id=before_id,

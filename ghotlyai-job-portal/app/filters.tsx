@@ -6,7 +6,7 @@ import { Pressable, ScrollView, Text, View } from "react-native";
 import { Button } from "@/components/ui/Button";
 import { Chip } from "@/components/ui/Chip";
 import type { JobType } from "@/lib/api";
-import { getCategories, getDistricts } from "@/lib/api";
+import { getCategories } from "@/lib/api";
 import { useAuthStore } from "@/store/auth";
 import { useJobFiltersStore } from "@/store/jobFilters";
 
@@ -25,10 +25,8 @@ export default function FiltersScreen() {
 
   const [categoryId, setCategoryId] = useState(filters.category_id);
   const [jobType, setJobType] = useState(filters.job_type);
-  const [district, setDistrict] = useState(filters.district ?? "");
 
   const { data: categories } = useQuery({ queryKey: ["categories"], queryFn: () => getCategories() });
-  const { data: districts } = useQuery({ queryKey: ["districts"], queryFn: getDistricts });
 
   const myCategories = (categories ?? []).filter((c) => myCategoryIds.includes(c.id));
 
@@ -36,7 +34,6 @@ export default function FiltersScreen() {
     setFilters({
       category_id: categoryId,
       job_type: jobType,
-      district: district || undefined,
     });
     router.back();
   }
@@ -44,7 +41,6 @@ export default function FiltersScreen() {
   function reset() {
     setCategoryId(undefined);
     setJobType(undefined);
-    setDistrict("");
     clear();
     router.back();
   }
@@ -69,16 +65,6 @@ export default function FiltersScreen() {
           <Chip label="All" selected={!jobType} onPress={() => setJobType(undefined)} />
           {JOB_TYPES.map((jt) => (
             <Chip key={jt.value} label={jt.label} selected={jobType === jt.value} onPress={() => setJobType(jt.value)} />
-          ))}
-        </View>
-      </View>
-
-      <View className="mb-6">
-        <Text className="font-body-strong text-ink text-[15px] mb-2">District</Text>
-        <View className="flex-row flex-wrap">
-          <Chip label="Any" selected={!district} onPress={() => setDistrict("")} />
-          {(districts?.top ?? []).map((d) => (
-            <Chip key={d} label={d} selected={district === d} onPress={() => setDistrict(d)} />
           ))}
         </View>
       </View>

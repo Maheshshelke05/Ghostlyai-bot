@@ -1,8 +1,10 @@
-"""Public reference data for the student app: categories, districts, price/trial settings.
+"""Public reference data for the student app: categories, price/trial settings.
 
-Unauthenticated on purpose - none of this is sensitive (the bot shows the same categories/
-districts to anyone who starts onboarding), and the welcome/login screens need price/trial
-copy before a student has logged in at all.
+Unauthenticated on purpose - none of this is sensitive (the bot shows the same categories to
+anyone who starts onboarding), and the welcome/login screens need price/trial copy before a
+student has logged in at all. No districts endpoint - the app doesn't collect district
+(see CLAUDE.md BUSINESS RULES); the Telegram bot's own onboarding still uses
+app/services/districts.py directly.
 """
 from __future__ import annotations
 
@@ -14,7 +16,6 @@ from app.api.student.schemas import CategoryOut, SettingsOut
 from app.db.models import Category
 from app.db.session import get_db
 from app.services.access import get_all_settings
-from app.services.districts import DISTRICTS, TOP_DISTRICTS
 
 router = APIRouter(prefix="/student", tags=["student-meta"])
 
@@ -27,11 +28,6 @@ async def list_categories(lang: str = "mr", db: AsyncSession = Depends(get_db)) 
         )
     ).scalars().all()
     return [CategoryOut(id=c.id, slug=c.slug, name=c.label(lang)) for c in rows]
-
-
-@router.get("/districts")
-async def list_districts() -> dict:
-    return {"districts": DISTRICTS, "top": TOP_DISTRICTS}
 
 
 @router.get("/settings", response_model=SettingsOut)

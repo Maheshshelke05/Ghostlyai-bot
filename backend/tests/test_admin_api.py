@@ -18,9 +18,9 @@ async def test_owner_can_list_users(client, owner_token):
     assert "items" in resp.json()
 
 
-async def test_settings_invalid_digest_time_returns_422(client, owner_token):
+async def test_settings_invalid_digest_max_jobs_returns_422(client, owner_token):
     resp = await client.put(
-        "/admin/settings", json={"digest_times": ["25:00"]},
+        "/admin/settings", json={"digest_max_jobs": 500},
         headers={"Authorization": f"Bearer {owner_token}"},
     )
     assert resp.status_code == 422

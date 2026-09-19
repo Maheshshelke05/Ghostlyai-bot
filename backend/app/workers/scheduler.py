@@ -27,7 +27,9 @@ TZ = "Asia/Kolkata"
 def build_scheduler() -> AsyncIOScheduler:
     scheduler = AsyncIOScheduler(timezone=TZ)
 
-    scheduler.add_job(digest_tick, CronTrigger(minute="*", timezone=TZ), id="digest_tick", max_instances=1)
+    scheduler.add_job(
+        digest_tick, CronTrigger(minute="*/2", timezone=TZ), id="digest_tick", max_instances=1
+    )
     scheduler.add_job(
         send_expiry_reminders, CronTrigger(hour=10, minute=0, timezone=TZ),
         id="expiry_reminders", max_instances=1,
@@ -52,7 +54,7 @@ def build_scheduler() -> AsyncIOScheduler:
         id="ghostly_alerts_tick", max_instances=1,
     )
     scheduler.add_job(
-        run_push_digest, CronTrigger(minute="*/20", timezone=TZ),
+        run_push_digest, CronTrigger(minute="*/2", timezone=TZ),
         id="push_digest", max_instances=1,
     )
     return scheduler

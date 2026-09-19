@@ -596,13 +596,11 @@ async def _finish_onboarding(
         from app.services.access import get_setting
 
         trial_days = await get_setting(db, "trial_days", 3)
-        digest_times = await get_setting(db, "digest_times", ["09:00", "18:00"])
         await message.answer(
             t(
                 lang, "profile_done_trial",
                 name=html.escape(user.full_name or ""),
                 days=trial_days,
-                times=", ".join(digest_times),
             )
         )
         sent = await send_digest_to_user(db, message.bot, user, limit=10)

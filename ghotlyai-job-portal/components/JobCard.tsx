@@ -5,6 +5,7 @@ import { Platform, Pressable, Text, View } from "react-native";
 
 import { Badge } from "@/components/ui/Badge";
 import type { JobOut } from "@/lib/api";
+import { daysUntil } from "@/lib/dates";
 
 const JOB_TYPE_LABEL: Record<string, string> = {
   govt: "Govt",
@@ -24,12 +25,6 @@ const cardShadow = Platform.select({
   android: { elevation: 1 },
   default: {},
 });
-
-function daysUntil(dateStr: string | null): number | null {
-  if (!dateStr) return null;
-  const diffMs = new Date(`${dateStr}T23:59:59`).getTime() - Date.now();
-  return Math.ceil(diffMs / (1000 * 60 * 60 * 24));
-}
 
 export function JobCard({ job, index = 0 }: { job: JobOut; index?: number }) {
   const days = daysUntil(job.last_date);

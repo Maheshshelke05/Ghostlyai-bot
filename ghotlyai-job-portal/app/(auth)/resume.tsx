@@ -1,5 +1,6 @@
 import * as DocumentPicker from "expo-document-picker";
 import * as ImagePicker from "expo-image-picker";
+import { router } from "expo-router";
 import { useState } from "react";
 import { Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -13,16 +14,21 @@ export default function ResumeSignupScreen() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const signupWithResume = useAuthStore((s) => s.signupWithResume);
+  const pendingName = useOnboardingDraft((s) => s.pendingName);
   const setSuggestedCategorySlugs = useOnboardingDraft((s) => s.setSuggestedCategorySlugs);
+  const setPendingAuth = useOnboardingDraft((s) => s.setPendingAuth);
 
   async function submit(file: { uri: string; name: string; mimeType?: string }) {
     setError(null);
     setLoading(true);
     try {
-      const result = await signupWithResume(file);
+      const result = await signupWithResume(file, pendingName);
       setSuggestedCategorySlugs(result.suggested_category_slugs);
-      // Root layout's Stack.Protected guards react to the token/nextStep update and swap into
-      // (onboarding) on their own - no explicit navigation needed here.
+      setPendingAuth(result);
+      // The actual sign-in (committing to the persisted auth store, which flips the root
+      // layout's Stack.Protected guards) happens at the end of the "creating your profile"
+      // animation, not here - see (auth)/creating-profile.tsx.
+      router.replace("/(auth)/creating-profile");
     } catch (err) {
       setError(apiErrorMessage(err, "Could not read this file. Try a clearer PDF or photo."));
     } finally {

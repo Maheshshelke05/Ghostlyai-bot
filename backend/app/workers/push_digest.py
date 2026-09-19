@@ -1,10 +1,10 @@
 """Push notifications for new matching jobs, for students using the app.
 
-Sibling to workers/digest.py's twice-daily Telegram digest, but runs more often since a push
-notification isn't rationed the way Telegram messages are (Chapter 10.2's 09:00/18:00 slots).
-Reuses the exact same matching_jobs_stmt() as the Telegram digest, so a job already delivered
-via Telegram - or already seen in the app's browsable feed, since both write to the same
-job_deliveries ledger via services/jobs.py::ensure_deliveries() - is correctly excluded here too.
+Sibling to workers/digest.py's frequent-interval Telegram digest, running on the same cadence
+(see scheduler.py) so both channels feel equally near-instant. Reuses the exact same
+matching_jobs_stmt() as the Telegram digest, so a job already delivered via Telegram - or
+already seen in the app's browsable feed, since both write to the same job_deliveries ledger
+via services/jobs.py::ensure_deliveries() - is correctly excluded here too.
 """
 from __future__ import annotations
 

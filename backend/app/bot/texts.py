@@ -51,7 +51,7 @@ TEXTS: dict[str, dict[str, str]] = {
         "profile_done_trial": (
             "🎉 प्रोफाइल पूर्ण झाली, {name}!\n"
             "🎁 तुम्हाला {days} दिवस FREE trial मिळाला आहे.\n"
-            "⏰ रोज {times} वाजता तुमच्या category चे jobs येतील.\n\n"
+            "⏰ नवीन jobs आले की लगेच तुमच्या category चे jobs येतील.\n\n"
             "/jobs - आत्ताचे jobs पाहा\n/profile - प्रोफाइल\n/subscribe - Subscription"
         ),
         "profile_done_no_trial": "✅ प्रोफाइल अपडेट झाली!",
@@ -154,7 +154,7 @@ TEXTS: dict[str, dict[str, str]] = {
         "profile_done_trial": (
             "🎉 प्रोफाइल पूरी हो गई, {name}!\n"
             "🎁 आपको {days} दिन FREE trial मिला है.\n"
-            "⏰ रोज {times} बजे आपकी category की jobs आएंगी.\n\n"
+            "⏰ नई jobs आते ही आपकी category की jobs तुरंत आएंगी.\n\n"
             "/jobs - अभी की jobs\n/profile - प्रोफाइल\n/subscribe - Subscription"
         ),
         "profile_done_no_trial": "✅ प्रोफाइल अपडेट हो गई!",
@@ -257,7 +257,7 @@ TEXTS: dict[str, dict[str, str]] = {
         "profile_done_trial": (
             "🎉 Profile complete, {name}!\n"
             "🎁 You got a {days}-day FREE trial.\n"
-            "⏰ Jobs for your categories arrive daily at {times}.\n\n"
+            "⏰ New jobs for your categories reach you right away.\n\n"
             "/jobs - jobs right now\n/profile - your profile\n/subscribe - subscription"
         ),
         "profile_done_no_trial": "✅ Profile updated!",

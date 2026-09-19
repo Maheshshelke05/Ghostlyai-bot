@@ -1,22 +1,40 @@
 import { FlashList } from "@shopify/flash-list";
-import { useInfiniteQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { router } from "expo-router";
-import { useState } from "react";
+import { MotiView } from "moti";
+import { useMemo, useState } from "react";
 import { Pressable, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { JobCard } from "@/components/JobCard";
 import { Button } from "@/components/ui/Button";
+import { Chip } from "@/components/ui/Chip";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { SearchBar } from "@/components/ui/SearchBar";
 import { ListSkeleton } from "@/components/ui/Skeleton";
-import { apiErrorMessage, browseJobs } from "@/lib/api";
+import { apiErrorMessage, browseJobs, getCategories } from "@/lib/api";
+import { useAuthStore } from "@/store/auth";
 import { countActiveFilters, useJobFiltersStore } from "@/store/jobFilters";
+
+function greeting(): string {
+  const h = new Date().getHours();
+  if (h < 12) return "Good morning";
+  if (h < 17) return "Good afternoon";
+  return "Good evening";
+}
 
 export default function HomeScreen() {
   const [query, setQuery] = useState("");
   const filters = useJobFiltersStore((s) => s.filters);
+  const setFilters = useJobFiltersStore((s) => s.setFilters);
   const activeFilterCount = countActiveFilters(filters);
+  const user = useAuthStore((s) => s.user);
+
+  const { data: categories } = useQuery({ queryKey: ["categories"], queryFn: () => getCategories() });
+  const myCategories = useMemo(
+    () => (categories ?? []).filter((c) => user?.category_ids.includes(c.id)),
+    [categories, user?.category_ids]
+  );
 
   const {
     data,
@@ -36,11 +54,20 @@ export default function HomeScreen() {
   });
 
   const jobs = data?.pages.flatMap((p) => p.items) ?? [];
+  const firstName = user?.full_name?.split(" ")[0];
 
   return (
     <SafeAreaView className="flex-1 bg-background" edges={["top"]}>
       <View className="px-4 pt-2 pb-3 bg-background">
-        <Text className="font-display text-ink text-[24px] mb-3">GhotlyAI</Text>
+        <MotiView
+          from={{ opacity: 0, translateY: -6 }}
+          animate={{ opacity: 1, translateY: 0 }}
+          transition={{ type: "timing", duration: 280 }}
+        >
+          <Text className="text-muted text-[13px]">{greeting()}{firstName ? `, ${firstName}` : ""} 👋</Text>
+          <Text className="font-display text-ink text-[26px] mb-3">Find your next job</Text>
+        </MotiView>
+
         <View className="flex-row items-center gap-2">
           <SearchBar value={query} onChangeText={setQuery} placeholder="Search jobs, companies..." />
           <Pressable
@@ -55,6 +82,20 @@ export default function HomeScreen() {
             ) : null}
           </Pressable>
         </View>
+
+        {myCategories.length > 1 ? (
+          <View className="flex-row flex-wrap mt-3">
+            <Chip label="All" selected={!filters.category_id} onPress={() => setFilters({ ...filters, category_id: undefined })} />
+            {myCategories.map((c) => (
+              <Chip
+                key={c.id}
+                label={c.name}
+                selected={filters.category_id === c.id}
+                onPress={() => setFilters({ ...filters, category_id: filters.category_id === c.id ? undefined : c.id })}
+              />
+            ))}
+          </View>
+        ) : null}
       </View>
 
       {isError ? (

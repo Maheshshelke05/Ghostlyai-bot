@@ -1,7 +1,6 @@
-import DateTimePicker from "@react-native-community/datetimepicker";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import { Platform, Pressable, ScrollView, Text, TextInput, View } from "react-native";
+import { ScrollView, Text, TextInput, View } from "react-native";
 
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -36,7 +35,6 @@ export default function SettingsScreen() {
   const { data, isLoading } = useQuery({ queryKey: ["settings"], queryFn: getSettings });
 
   const [form, setForm] = useState<SettingsData | null>(null);
-  const [showTimePicker, setShowTimePicker] = useState(false);
 
   useEffect(() => {
     if (data) setForm(data);
@@ -72,7 +70,6 @@ export default function SettingsScreen() {
     if (f.max_categories <= 0 || f.max_categories > 10) return "Max categories must be between 1 and 10";
     if (f.teaser_every_hours <= 0) return "Teaser hours must be greater than 0";
     if (f.job_delay_minutes < 0 || f.job_delay_minutes > 1440) return "Hold time must be between 0 and 1440 minutes";
-    if (f.digest_times.length === 0) return "Add at least one digest time";
     return null;
   };
 
@@ -83,15 +80,6 @@ export default function SettingsScreen() {
       return;
     }
     saveMutation.mutate(form);
-  };
-
-  const addTime = (date: Date) => {
-    const hh = String(date.getHours()).padStart(2, "0");
-    const mm = String(date.getMinutes()).padStart(2, "0");
-    const value = `${hh}:${mm}`;
-    if (!form.digest_times.includes(value)) {
-      set("digest_times", [...form.digest_times, value].sort());
-    }
   };
 
   return (
@@ -109,34 +97,6 @@ export default function SettingsScreen() {
         {NUMBER_FIELDS.map(({ key, label }) => (
           <NumberField key={key} label={label} value={form[key]} onChange={(v) => set(key, v)} />
         ))}
-
-        <Text className="text-sm font-semibold text-muted mb-1.5 mt-3">Digest times (IST)</Text>
-        <View className="flex-row flex-wrap items-center mb-2">
-          {form.digest_times.map((time) => (
-            <Pressable
-              key={time}
-              onPress={() => set("digest_times", form.digest_times.filter((t) => t !== time))}
-              className="bg-brand rounded-full px-4 py-2 mr-2 mb-2"
-            >
-              <Text className="text-brand-ink text-sm font-semibold">{time} ✕</Text>
-            </Pressable>
-          ))}
-          <Pressable onPress={() => setShowTimePicker(true)} className="bg-surface border border-line rounded-full px-4 py-2 mb-2">
-            <Text className="text-ink text-sm font-semibold">+ Add time</Text>
-          </Pressable>
-        </View>
-
-        {showTimePicker ? (
-          <DateTimePicker
-            value={new Date()}
-            mode="time"
-            is24Hour
-            onChange={(_, date) => {
-              setShowTimePicker(Platform.OS === "ios");
-              if (date) addTime(date);
-            }}
-          />
-        ) : null}
       </ScrollView>
 
       <View className="absolute bottom-0 left-0 right-0 bg-background border-t border-line px-4 pt-3 pb-6">

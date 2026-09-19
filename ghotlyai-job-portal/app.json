@@ -9,8 +9,7 @@
     "userInterfaceStyle": "light",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.jobalertbot.student",
-      "googleServicesFile": "./GoogleService-Info.plist"
+      "bundleIdentifier": "com.jobalertbot.student"
     },
     "android": {
       "package": "com.jobalertbot.student",
@@ -64,7 +63,6 @@
     },
     "experiments": {
       "typedRoutes": true
-    },
-    "owner": "mahesh0505"
+    }
   }
 }

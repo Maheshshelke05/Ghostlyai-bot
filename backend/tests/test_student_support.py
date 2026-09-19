@@ -20,7 +20,7 @@ async def test_send_and_read_support_thread(client, db):
     await db.commit()
     headers = await _student_headers(user)
 
-    resp = await client.post("/student/support", json={"text": "My apply link is broken"}, headers=headers)
+    resp = await client.post("/student/support", data={"text": "My apply link is broken"}, headers=headers)
     assert resp.status_code == 200, resp.text
     assert resp.json()["direction"] == "in"
 
@@ -29,17 +29,69 @@ async def test_send_and_read_support_thread(client, db):
     messages = resp.json()["messages"]
     assert len(messages) == 1
     assert messages[0]["text"] == "My apply link is broken"
+    assert messages[0]["image_url"] is None
+
+
+async def test_send_support_message_with_subject_and_image(client, db, monkeypatch, tmp_path):
+    user = await make_user(db)
+    await db.commit()
+    headers = await _student_headers(user)
+
+    # Real Cloudinary credentials may be configured in this dev environment (same as the
+    # resume-upload tests deal with) - mock the actual upload so this test never makes a real
+    # network call, same pattern as tests/test_student_auth.py's _fake_save_resume.
+    saved_path = str(tmp_path / "support_image.png")
+
+    async def _fake_save_support_image(message_id, data, mime):
+        with open(saved_path, "wb") as f:
+            f.write(data)
+        return saved_path
+
+    async def _fake_get_support_image_url(path):
+        return None
+
+    import app.api.student.support as student_support_module
+
+    monkeypatch.setattr(student_support_module, "save_support_image", _fake_save_support_image)
+    monkeypatch.setattr(student_support_module, "get_support_image_url", _fake_get_support_image_url)
+
+    resp = await client.post(
+        "/student/support",
+        data={"text": "Screenshot attached", "subject": "Payment issue"},
+        files={"image": ("proof.png", b"\x89PNG\r\n\x1a\n" + b"0" * 20, "image/png")},
+        headers=headers,
+    )
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["subject"] == "Payment issue"
+    assert body["image_url"] == f"/student/support/{body['id']}/image"
+
+    resp = await client.get(f"/student/support/{body['id']}/image", headers=headers)
+    assert resp.status_code == 200
+    assert resp.content.startswith(b"\x89PNG")
+
+
+async def test_support_rejects_unsupported_image_type(client, db):
+    user = await make_user(db)
+    await db.commit()
+    resp = await client.post(
+        "/student/support",
+        data={"text": "Here is a file"},
+        files={"image": ("virus.exe", b"not an image", "application/octet-stream")},
+        headers=await _student_headers(user),
+    )
+    assert resp.status_code == 400
 
 
 async def test_support_message_too_short_is_rejected(client, db):
     user = await make_user(db)
     await db.commit()
-    resp = await client.post("/student/support", json={"text": "hi"}, headers=await _student_headers(user))
+    resp = await client.post("/student/support", data={"text": "hi"}, headers=await _student_headers(user))
     assert resp.status_code == 422
 
 
 async def test_support_requires_auth(client):
-    resp = await client.post("/student/support", json={"text": "hello there"})
+    resp = await client.post("/student/support", data={"text": "hello there"})
     assert resp.status_code == 401
     resp = await client.get("/student/support")
     assert resp.status_code == 401

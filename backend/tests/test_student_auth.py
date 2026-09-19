@@ -73,9 +73,43 @@ async def test_signup_new_user_creates_app_only_account_from_resume(client, cate
     assert body["user"]["full_name"] == "Rahul Sharma"
     assert body["user"]["email"] == "rahul@example.com"
     assert body["user"]["status"] == "onboarding"
-    assert body["next_step"] == "district"  # name already extracted, district is next
+    assert body["next_step"] == "profile"  # name already extracted, no district step
     assert body["suggested_category_slugs"] == ["it-software"]
     assert body["access_token"]
+
+
+async def test_signup_prefers_app_typed_name_over_resume_extraction(client, categories, monkeypatch):
+    monkeypatch.setattr(
+        "app.services.resume_intake.ai.parse_resume",
+        _fake_parse_resume(_resume(phone="9876500011", full_name="Resume Name")),
+    )
+    monkeypatch.setattr("app.services.resume_intake.storage.save_resume", _fake_save_resume)
+
+    resp = await client.post(
+        "/student/auth/resume", data={"full_name": "Typed Name"}, files=_resume_file()
+    )
+    assert resp.status_code == 200, resp.text
+    assert resp.json()["user"]["full_name"] == "Typed Name"
+
+
+async def test_signup_fills_missing_name_for_recognized_telegram_user(client, db, categories, monkeypatch):
+    user = await make_user(db, phone="+919876500012", status="active", full_name=None, category_slugs=["it-software"])
+    from app.services.access import start_trial
+
+    await start_trial(db, user)
+    await db.commit()
+
+    monkeypatch.setattr(
+        "app.services.resume_intake.ai.parse_resume",
+        _fake_parse_resume(_resume(phone="9876500012")),
+    )
+    monkeypatch.setattr("app.services.resume_intake.storage.save_resume", _fake_save_resume)
+
+    resp = await client.post(
+        "/student/auth/resume", data={"full_name": "Filled In Name"}, files=_resume_file()
+    )
+    assert resp.status_code == 200, resp.text
+    assert resp.json()["user"]["full_name"] == "Filled In Name"
 
 
 async def test_signup_existing_telegram_user_is_recognized_instantly(client, db, categories, monkeypatch):
@@ -146,17 +180,12 @@ async def _signup(client, monkeypatch, phone: str | None) -> str:
     return resp.json()["access_token"]
 
 
-async def test_onboarding_district_then_complete(client, categories, monkeypatch):
+async def test_onboarding_straight_to_complete_no_district(client, categories, monkeypatch):
     token = await _signup(client, monkeypatch, "9876500004")
     headers = {"Authorization": f"Bearer {token}"}
 
     resp = await client.get("/student/auth/me", headers=headers)
-    assert resp.json()["next_step"] == "district"  # name already came from the resume
-
-    resp = await client.put("/student/me/district", json={"district": "aurangabad"}, headers=headers)
-    assert resp.status_code == 200, resp.text
-    assert resp.json()["user"]["district"] == "Chhatrapati Sambhajinagar"
-    assert resp.json()["next_step"] == "profile"
+    assert resp.json()["next_step"] == "profile"  # name already came from the resume, no district step
 
     cat_id = categories["it-software"].id
     resp = await client.post(
@@ -205,19 +234,24 @@ async def test_set_phone_rejects_number_already_taken(client, db, categories, mo
     assert resp.status_code == 400
 
 
-async def test_complete_onboarding_requires_name_and_district_first(client, categories, monkeypatch):
-    token = await _signup(client, monkeypatch, "9876500008")
-    headers = {"Authorization": f"Bearer {token}"}
+async def test_complete_onboarding_requires_name_first(client, monkeypatch):
+    monkeypatch.setattr(
+        "app.services.resume_intake.ai.parse_resume", _fake_parse_resume(_resume(full_name=None, phone="9876500008"))
+    )
+    monkeypatch.setattr("app.services.resume_intake.storage.save_resume", _fake_save_resume)
+    resp = await client.post("/student/auth/resume", files=_resume_file())
+    assert resp.status_code == 200, resp.text
+    headers = {"Authorization": f"Bearer {resp.json()['access_token']}"}
+
     resp = await client.post(
         "/student/me/complete", json={"category_ids": [1], "job_types": []}, headers=headers
     )
-    assert resp.status_code == 400  # district still missing
+    assert resp.status_code == 400  # name still missing
 
 
 async def test_complete_onboarding_enforces_max_categories(client, categories, monkeypatch):
     token = await _signup(client, monkeypatch, "9876500009")
     headers = {"Authorization": f"Bearer {token}"}
-    await client.put("/student/me/district", json={"district": "Pune"}, headers=headers)
 
     all_ids = [c.id for c in categories.values()][:4]
     resp = await client.post(
@@ -252,10 +286,6 @@ async def test_public_meta_endpoints(client, categories):
     resp = await client.get("/student/categories")
     assert resp.status_code == 200
     assert len(resp.json()) == len(categories)
-
-    resp = await client.get("/student/districts")
-    assert resp.status_code == 200
-    assert "Pune" in resp.json()["districts"]
 
     resp = await client.get("/student/settings")
     assert resp.status_code == 200
