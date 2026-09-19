@@ -60,6 +60,12 @@ async def test_admin_reply_pushes_app_only_student_without_crashing(client, db, 
     import app.api.admin.support as admin_support_module
 
     monkeypatch.setattr(admin_support_module, "send_push_to_student", fake_send_push_to_student)
+    # get_bot() constructs a real aiogram Bot(token=settings.BOT_TOKEN), which validates the
+    # token format at construction time - CI has no real BOT_TOKEN configured. chat_id is None
+    # here so safe_send() never actually touches the bot object, but it still evaluates
+    # get_bot() as an argument first, so it must not raise. Same pattern as
+    # test_support_and_delay.py's test_student_message_appears_in_the_inbox_and_reply_reaches_them.
+    monkeypatch.setattr(admin_support_module, "get_bot", lambda: object())
 
     resp = await client.post(
         f"/admin/support/{student.id}/reply",
