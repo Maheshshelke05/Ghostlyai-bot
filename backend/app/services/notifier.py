@@ -91,14 +91,20 @@ def parse_tracking_token(token: str) -> int | None:
     return delivery_id
 
 
-async def safe_send(bot: Bot, chat_id: int, text: str, markup=None) -> str:
-    """Returns "ok" | "blocked" | "error".
+async def safe_send(bot: Bot, chat_id: int | None, text: str, markup=None) -> str:
+    """Returns "ok" | "blocked" | "error" | "skipped".
 
     The bot's default parse mode is HTML, and admin-written text (broadcasts, direct
     messages) may intentionally use tags like <b> - but it may also contain a bare "&" or
     "<" ("TCS & Infosys"), which Telegram rejects with "can't parse entities". Rather than
     escaping everything (which would break intended formatting), retry once as plain text.
+
+    An app-only student (phone auth, no Telegram) has chat_id=None - there is nothing to send
+    to, and this is not a delivery failure, so callers must not treat "skipped" like "blocked".
     """
+    if chat_id is None:
+        return "skipped"
+
     plain = False
     for attempt in range(_MAX_RETRIES):
         try:

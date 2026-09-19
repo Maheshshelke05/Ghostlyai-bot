@@ -12,6 +12,7 @@ from app.bot.texts import t
 from app.db.models import Payment
 from app.db.session import get_db
 from app.services.payments import mark_link_paid, verify_webhook_signature
+from app.services.razorpay_orders import mark_order_paid
 
 logger = logging.getLogger("app.webhooks.razorpay")
 router = APIRouter(tags=["webhooks"])
@@ -32,6 +33,25 @@ async def razorpay_webhook(
     event = payload.get("event", "")
     link_payload = (payload.get("payload", {}) or {}).get("payment_link", {}).get("entity", {})
     link_id = link_payload.get("id")
+
+    # Defense-in-depth for the student app's native Checkout SDK (Orders) flow: the app also
+    # verifies the payment client-side via POST /student/payments/verify, and mark_order_paid()
+    # is idempotent, so whichever of the two arrives first wins and the other is a safe no-op.
+    # A payment_link.paid payment also carries an order_id, but it was never stored on any
+    # Payment row (we only set razorpay_order_id for orders our own create_order() made), so
+    # this never double-processes a bot/Payment-Links payment. Checked before the link_id-only
+    # early return below, since an Orders payment has no payment_link payload at all.
+    if event == "payment.captured":
+        payment_entity = (payload.get("payload", {}) or {}).get("payment", {}).get("entity", {})
+        order_id = payment_entity.get("order_id")
+        if order_id:
+            try:
+                await mark_order_paid(db, order_id, payment_entity.get("id", "unknown"))
+                await db.commit()
+            except Exception:  # noqa: BLE001
+                logger.exception("Error handling Razorpay payment.captured order_id=%s", order_id)
+                await db.rollback()
+        return Response(status_code=200)
 
     if not link_id:
         return Response(status_code=200)
@@ -61,6 +81,22 @@ async def razorpay_webhook(
     except Exception:  # noqa: BLE001
         logger.exception("Error handling Razorpay webhook event=%s link_id=%s", event, link_id)
         await db.rollback()
+
+    # Defense-in-depth for the student app's native Checkout SDK (Orders) flow: the app also
+    # verifies the payment client-side via POST /student/payments/verify, and mark_order_paid()
+    # is idempotent, so whichever of the two arrives first wins and the other is a safe no-op.
+    # A payment_link.paid payment also carries an order_id, but it was never stored on any
+    # Payment row (we only set razorpay_order_id for orders our own create_order() made), so
+    # this never double-processes a bot/Payment-Links payment.
+    payment_entity = (payload.get("payload", {}) or {}).get("payment", {}).get("entity", {})
+    order_id = payment_entity.get("order_id")
+    if event == "payment.captured" and order_id:
+        try:
+            await mark_order_paid(db, order_id, payment_entity.get("id", "unknown"))
+            await db.commit()
+        except Exception:  # noqa: BLE001
+            logger.exception("Error handling Razorpay payment.captured order_id=%s", order_id)
+            await db.rollback()
 
     # Always return 200 once the signature is verified, so Razorpay does not retry forever.
     return Response(status_code=200)

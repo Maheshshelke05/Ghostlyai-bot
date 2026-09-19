@@ -162,6 +162,12 @@ from app.api.admin.broadcast import router as admin_broadcast_router  # noqa: E4
 from app.api.admin.staff import router as admin_staff_router  # noqa: E402
 from app.api.admin.support import router as admin_support_router  # noqa: E402
 from app.api.admin.ghostly import router as admin_ghostly_router  # noqa: E402
+from app.api.student.auth import router as student_auth_router  # noqa: E402
+from app.api.student.onboarding import router as student_onboarding_router  # noqa: E402
+from app.api.student.meta import router as student_meta_router  # noqa: E402
+from app.api.student.jobs import router as student_jobs_router  # noqa: E402
+from app.api.student.payments import router as student_payments_router  # noqa: E402
+from app.api.student.support import router as student_support_router  # noqa: E402
 
 app.include_router(telegram_webhook_router)
 app.include_router(razorpay_webhook_router)
@@ -178,3 +184,9 @@ app.include_router(admin_broadcast_router)
 app.include_router(admin_staff_router)
 app.include_router(admin_support_router)
 app.include_router(admin_ghostly_router)
+app.include_router(student_auth_router)
+app.include_router(student_onboarding_router)
+app.include_router(student_meta_router)
+app.include_router(student_jobs_router)
+app.include_router(student_payments_router)
+app.include_router(student_support_router)

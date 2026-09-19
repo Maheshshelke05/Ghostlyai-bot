@@ -1,0 +1,140 @@
+name: Build Student App APK
+
+on:
+  workflow_dispatch: {}
+  push:
+    branches: [main]
+    paths:
+      - "ghotlyai-job-portal/**"
+      - ".github/workflows/build-student-apk.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ghotlyai-job-portal
+    env:
+      EXPO_PUBLIC_API_URL: https://api.ghotlyai.in
+      EXPO_PUBLIC_BUILD_NUMBER: ${{ github.run_number }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: ghotlyai-job-portal/package-lock.json
+
+      - name: Setup Java JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps
+
+      - name: Type-check
+        run: npx tsc --noEmit
+
+      - name: Decode google-services.json (Firebase Auth + push notifications)
+        run: |
+          echo "$GOOGLE_SERVICES_JSON_BASE64" | tr -d '[:space:]' | base64 -d -i > google-services.json
+          python3 -c "import json; json.load(open('google-services.json'))"
+          echo "google-services.json decoded and valid"
+        env:
+          GOOGLE_SERVICES_JSON_BASE64: ${{ secrets.STUDENT_GOOGLE_SERVICES_JSON_BASE64 }}
+
+      - name: Prebuild Android project
+        run: npx expo prebuild --platform android
+
+      - name: Decode release keystore
+        run: |
+          echo "$ANDROID_RELEASE_KEYSTORE_BASE64" | tr -d '[:space:]' | base64 -d -i > android/app/release.keystore
+          SIZE=$(stat -c%s android/app/release.keystore)
+          echo "Decoded keystore size: $SIZE bytes"
+          if [ "$SIZE" -lt 500 ]; then
+            echo "::error::Decoded keystore is suspiciously small ($SIZE bytes) - the STUDENT_ANDROID_RELEASE_KEYSTORE_BASE64 secret is likely truncated or corrupted."
+            exit 1
+          fi
+          keytool -list -keystore android/app/release.keystore -storepass "$ANDROID_RELEASE_KEYSTORE_PASSWORD" -alias "$ANDROID_RELEASE_KEY_ALIAS" > /dev/null
+          echo "Keystore verified: alias '$ANDROID_RELEASE_KEY_ALIAS' found and readable."
+        env:
+          ANDROID_RELEASE_KEYSTORE_BASE64: ${{ secrets.STUDENT_ANDROID_RELEASE_KEYSTORE_BASE64 }}
+          ANDROID_RELEASE_KEYSTORE_PASSWORD: ${{ secrets.STUDENT_ANDROID_RELEASE_KEYSTORE_PASSWORD }}
+          ANDROID_RELEASE_KEY_ALIAS: ${{ secrets.STUDENT_ANDROID_RELEASE_KEY_ALIAS }}
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x android/gradlew
+
+      # arm64-v8a only (not even armeabi-v7a, unlike the admin app) - this app carries heavier
+      # native SDKs (Firebase Auth + Razorpay Checkout) on top of the same RN/Expo base, and
+      # virtually every phone a student owns today is 64-bit; there's no real 32-bit-only
+      # install base to protect. This is the main lever keeping the APK near the ~50-60MB target.
+      - name: Tune Gradle build (heap, arm64-only ABI)
+        run: |
+          sed -i 's/^org.gradle.jvmargs=.*/org.gradle.jvmargs=-Xmx4096m -XX:MaxMetaspaceSize=1024m -XX:+HeapDumpOnOutOfMemoryError/' android/gradle.properties
+          grep -q '^org.gradle.jvmargs=' android/gradle.properties || echo 'org.gradle.jvmargs=-Xmx4096m -XX:MaxMetaspaceSize=1024m' >> android/gradle.properties
+          sed -i 's/^reactNativeArchitectures=.*/reactNativeArchitectures=arm64-v8a/' android/gradle.properties
+          grep -q '^reactNativeArchitectures=' android/gradle.properties || echo 'reactNativeArchitectures=arm64-v8a' >> android/gradle.properties
+          grep -E '^(org.gradle.jvmargs|reactNativeArchitectures)=' android/gradle.properties
+
+      - name: Build Android Release APK
+        working-directory: ghotlyai-job-portal/android
+        run: ./gradlew assembleRelease --no-daemon
+        env:
+          ANDROID_RELEASE_KEYSTORE_PATH: release.keystore
+          ANDROID_RELEASE_KEYSTORE_PASSWORD: ${{ secrets.STUDENT_ANDROID_RELEASE_KEYSTORE_PASSWORD }}
+          ANDROID_RELEASE_KEY_ALIAS: ${{ secrets.STUDENT_ANDROID_RELEASE_KEY_ALIAS }}
+
+      - name: Locate and prepare APK
+        id: apk
+        run: |
+          SRC="android/app/build/outputs/apk/release/app-release.apk"
+          VERSION=$(node -p "require('./app.json').expo.version")
+          NAME="jobkatta-v${VERSION}-${GITHUB_RUN_NUMBER}.apk"
+          cp "$SRC" "$NAME"
+          SIZE_MB=$(du -m "$NAME" | cut -f1)
+          echo "APK size: ${SIZE_MB} MB"
+          echo "apk_name=$NAME" >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Upload APK as workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.apk.outputs.apk_name }}
+          path: ghotlyai-job-portal/${{ steps.apk.outputs.apk_name }}
+          retention-days: 90
+
+      # softprops/action-gh-release can flake on larger APK uploads, so the release is
+      # published with the preinstalled gh CLI and the upload is retried until it lands
+      # (mirrors build-admin-apk.yml). The artifact above is always there as a fallback.
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: jobkatta-v${{ steps.apk.outputs.version }}-${{ github.run_number }}
+          TITLE: JobKatta v${{ steps.apk.outputs.version }} (build ${{ github.run_number }})
+          APK: ${{ steps.apk.outputs.apk_name }}
+        run: |
+          set -u
+          NOTES="Automated build from commit ${GITHUB_SHA}."
+          if ! gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --title "$TITLE" --notes "$NOTES" --latest
+          fi
+          for attempt in 1 2 3 4 5; do
+            if gh release upload "$TAG" "$APK" --repo "$GITHUB_REPOSITORY" --clobber; then
+              echo "Uploaded $APK on attempt $attempt"
+              gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json url,assets --jq '.url, (.assets[] | .name + " " + (.size|tostring) + " bytes")'
+              exit 0
+            fi
+            echo "Upload attempt $attempt failed; waiting before retrying..."
+            sleep $((attempt * 20))
+          done
+          echo "::error::Release asset upload failed after 5 attempts (the APK is still available as a workflow artifact)"
+          exit 1

@@ -1,0 +1,71 @@
+{
+  "expo": {
+    "name": "JobKatta",
+    "slug": "jobkatta",
+    "scheme": "jobkatta",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.jobalertbot.student",
+      "googleServicesFile": "./GoogleService-Info.plist"
+    },
+    "android": {
+      "package": "com.jobalertbot.student",
+      "googleServicesFile": "./google-services.json",
+      "adaptiveIcon": {
+        "backgroundColor": "#16A34A",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-font",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "backgroundColor": "#16A34A",
+          "imageWidth": 200
+        }
+      ],
+      "expo-secure-store",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "JobKatta needs access to your photos so you can upload a resume image.",
+          "cameraPermission": false,
+          "microphonePermission": false
+        }
+      ],
+      "expo-document-picker",
+      [
+        "expo-notifications",
+        {
+          "color": "#16A34A"
+        }
+      ],
+      "@react-native-firebase/app",
+      "./plugins/withReleaseSigning.js"
+    ],
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "5cb9cf0c-4a53-4130-a613-6a3f08914b1e"
+      }
+    },
+    "experiments": {
+      "typedRoutes": true
+    },
+    "owner": "mahesh0505"
+  }
+}

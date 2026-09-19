@@ -4,7 +4,7 @@ from __future__ import annotations
 import csv
 import io
 from datetime import date, datetime, timedelta
-from typing import Any
+from typing import Any, Optional
 
 import openpyxl
 from sqlalchemy import and_, exists, or_, select
@@ -172,6 +172,100 @@ def matching_jobs_stmt(user: User, limit: int, days_window: int = 7, min_age_min
         .limit(limit)
     )
     return stmt
+
+
+def browse_jobs_stmt(
+    user: User,
+    *,
+    category_id: Optional[int] = None,
+    job_type: Optional[str] = None,
+    district: Optional[str] = None,
+    q: Optional[str] = None,
+    days_window: int = 7,
+    before_created_at: Optional[datetime] = None,
+    before_id: Optional[int] = None,
+    limit: int = 20,
+):
+    """SQLAlchemy select() for the app's browsable job feed.
+
+    Sibling to matching_jobs_stmt(), same category/job-type/last-date/recency rules, but
+    deliberately does NOT anti-join JobDelivery - a feed the student can scroll and re-open
+    should keep showing jobs they've already seen, unlike a one-shot digest. Supports the
+    home screen's search box and filter button as explicit overrides/narrowing on top of the
+    student's own saved categories (this never lets a student browse outside the categories
+    they picked - that's the product's subscription boundary, not just a UI default).
+    """
+    now = utcnow()
+    since = now - timedelta(days=days_window)
+
+    category_ids = [uc.category_id for uc in user.category_links]
+    if not category_ids:
+        return select(Job).where(Job.id.is_(None))
+
+    conditions = [
+        Job.status == "active",
+        Job.category_id.in_(category_ids),
+        Job.created_at > since,
+        or_(Job.last_date.is_(None), Job.last_date >= today_ist()),
+    ]
+
+    if category_id is not None:
+        conditions.append(Job.category_id == category_id)
+
+    if job_type:
+        conditions.append(Job.job_type == job_type)
+    elif user.job_types:
+        conditions.append(Job.job_type.in_(user.job_types))
+
+    if district:
+        conditions.append(or_(Job.district.is_(None), Job.district == district, Job.job_type == "wfh"))
+
+    if q:
+        like = f"%{q.strip()}%"
+        conditions.append(
+            or_(Job.title.ilike(like), Job.company.ilike(like), Job.location_text.ilike(like))
+        )
+
+    if before_created_at is not None and before_id is not None:
+        conditions.append(
+            or_(
+                Job.created_at < before_created_at,
+                and_(Job.created_at == before_created_at, Job.id < before_id),
+            )
+        )
+
+    return (
+        select(Job)
+        .where(and_(*conditions))
+        .order_by(Job.created_at.desc(), Job.id.desc())
+        .limit(limit)
+    )
+
+
+async def ensure_deliveries(
+    db: AsyncSession, user: User, jobs: list[Job]
+) -> dict[int, JobDelivery]:
+    """Batch get-or-creates JobDelivery rows for a page of browsed jobs, so each can get a
+    tracking_url() and so a job already seen in-app is correctly excluded from future push
+    "what's new" notifications (they share the same delivery ledger as the Telegram digest)."""
+    if not jobs:
+        return {}
+    job_ids = [job.id for job in jobs]
+    existing = (
+        await db.execute(
+            select(JobDelivery).where(
+                JobDelivery.user_id == user.id, JobDelivery.job_id.in_(job_ids)
+            )
+        )
+    ).scalars().all()
+    by_job_id = {d.job_id: d for d in existing}
+    for job in jobs:
+        if job.id not in by_job_id:
+            delivery = JobDelivery(job_id=job.id, user_id=user.id)
+            db.add(delivery)
+            by_job_id[job.id] = delivery
+    await db.flush()
+    return by_job_id
 
 
 def today_ist() -> date:

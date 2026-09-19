@@ -23,13 +23,13 @@ def verify_password(password: str, password_hash: str) -> bool:
         return False
 
 
-def create_token(admin_id: int, role: str) -> str:
+def create_token(subject_id: int, role: str, *, expire_hours: int | None = None) -> str:
     now = datetime.now(timezone.utc)
     payload = {
-        "sub": str(admin_id),
+        "sub": str(subject_id),
         "role": role,
         "iat": now,
-        "exp": now + timedelta(hours=settings.JWT_EXPIRE_HOURS),
+        "exp": now + timedelta(hours=expire_hours if expire_hours is not None else settings.JWT_EXPIRE_HOURS),
     }
     return jwt.encode(payload, settings.JWT_SECRET, algorithm=ALGORITHM)
 

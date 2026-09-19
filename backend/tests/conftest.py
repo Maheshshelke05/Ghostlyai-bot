@@ -59,14 +59,22 @@ async def make_user(
     trial_ends_at=None,
     paid_until=None,
     full_name: str = "Test User",
+    phone: Optional[str] = None,
+    telegram_id: Optional[int] = ...,
 ) -> User:
     global _next_telegram_id
     _next_telegram_id += 1
+    # phone.users has a unique constraint (Migration 0004) - every test user needs its own
+    # value unless a test explicitly wants a specific (or absent, for app-only users) phone.
+    if phone is None:
+        phone = f"+91{9000000000 + _next_telegram_id}"
+    if telegram_id is ...:
+        telegram_id = _next_telegram_id
 
     user = User(
-        telegram_id=_next_telegram_id,
+        telegram_id=telegram_id,
         full_name=full_name,
-        phone="+919876543210",
+        phone=phone,
         district=district,
         language="mr",
         job_types=job_types or [],

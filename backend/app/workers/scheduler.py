@@ -15,6 +15,7 @@ from app.workers.broadcast import broadcast_runner
 from app.workers.digest import digest_tick
 from app.workers.ghostly_alerts import ghostly_alerts_tick
 from app.workers.maintenance import cleanup_retention, expire_jobs, expire_payment_links
+from app.workers.push_digest import run_push_digest
 from app.workers.reminders import send_expiry_reminders
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
@@ -49,6 +50,10 @@ def build_scheduler() -> AsyncIOScheduler:
     scheduler.add_job(
         ghostly_alerts_tick, CronTrigger(minute="*/5", timezone=TZ),
         id="ghostly_alerts_tick", max_instances=1,
+    )
+    scheduler.add_job(
+        run_push_digest, CronTrigger(minute="*/20", timezone=TZ),
+        id="push_digest", max_instances=1,
     )
     return scheduler
 

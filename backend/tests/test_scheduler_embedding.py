@@ -39,7 +39,7 @@ async def test_scheduler_starts_and_stops_when_enabled(monkeypatch):
         assert job_ids == {
             "digest_tick", "expiry_reminders", "expire_jobs",
             "expire_payment_links", "broadcast_runner", "cleanup_retention",
-            "ghostly_alerts_tick",
+            "ghostly_alerts_tick", "push_digest",
         }
         original_shutdown = scheduler.shutdown
         monkeypatch.setattr(

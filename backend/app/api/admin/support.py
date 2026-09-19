@@ -15,6 +15,7 @@ from app.db.models import Admin, SupportMessage, User
 from app.db.session import get_db
 from app.services.access import reactivate_if_bot_blocked
 from app.services.notifier import safe_send
+from app.services.push import send_push_to_student
 
 router = APIRouter(prefix="/admin/support", tags=["admin-support"])
 
@@ -148,6 +149,12 @@ async def reply(
         user.status = "bot_blocked"
     elif result == "ok":
         reactivate_if_bot_blocked(user)
+
+    # Push notification is separate from (and never a substitute for) the Telegram send above -
+    # an app-only student (telegram_id=None) has "skipped" for `result`, and a dual student
+    # gets both channels.
+    preview = payload.text if len(payload.text) <= 120 else payload.text[:117] + "..."
+    await send_push_to_student(user, "Support replied", preview, {"type": "support"})
 
     # stored either way, so the thread still shows what the admin tried to send
     db.add(SupportMessage(user_id=user_id, admin_id=admin.id, direction="out", text=payload.text))

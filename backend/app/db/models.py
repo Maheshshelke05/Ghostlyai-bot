@@ -83,7 +83,8 @@ class User(Base):
     __tablename__ = "users"
 
     id: Mapped[int] = mapped_column(BigIntPK, primary_key=True)
-    telegram_id: Mapped[int] = mapped_column(BigInteger, unique=True, nullable=False)
+    # Nullable: an app-only student (phone auth, never touched Telegram) has no telegram_id.
+    telegram_id: Mapped[Optional[int]] = mapped_column(BigInteger, unique=True, nullable=True)
     username: Mapped[Optional[str]] = mapped_column(String(64))
     full_name: Mapped[Optional[str]] = mapped_column(String(120))
     phone: Mapped[Optional[str]] = mapped_column(String(20))
@@ -100,6 +101,9 @@ class User(Base):
     referred_by: Mapped[Optional[int]] = mapped_column(
         BigInteger, ForeignKey("users.id", ondelete="SET NULL")
     )
+    # One Expo push token per student device, for the student app (job matches, support
+    # replies). Set via PUT /student/me/push-token, same pattern as Admin.expo_push_token.
+    expo_push_token: Mapped[Optional[str]] = mapped_column(String(200), nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(TZDateTime, nullable=False, default=utcnow)
     updated_at: Mapped[datetime] = mapped_column(
@@ -124,9 +128,9 @@ class User(Base):
 
     __table_args__ = (
         Index("ix_users_status", "status"),
-        Index("ix_users_phone", "phone"),
         Index("ix_users_district", "district"),
         Index("ix_users_created", "created_at"),
+        UniqueConstraint("phone", name="uq_users_phone"),
     )
 
 
@@ -291,6 +295,9 @@ class Payment(Base):
     )
     reference_id: Mapped[str] = mapped_column(String(40), unique=True, nullable=False)
     razorpay_link_id: Mapped[Optional[str]] = mapped_column(String(40), unique=True)
+    # Set instead of razorpay_link_id for the student app's native Checkout SDK flow (Orders
+    # API), which the bot's Payment-Links flow never uses.
+    razorpay_order_id: Mapped[Optional[str]] = mapped_column(String(64), unique=True)
     razorpay_payment_id: Mapped[Optional[str]] = mapped_column(String(40))
     short_url: Mapped[Optional[str]] = mapped_column(String(255))
     amount_paise: Mapped[int] = mapped_column(Integer, nullable=False)
