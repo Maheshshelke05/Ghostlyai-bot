@@ -107,6 +107,11 @@ class User(Base):
     # One Expo push token per student device, for the student app (job matches, support
     # replies). Set via PUT /student/me/push-token, same pattern as Admin.expo_push_token.
     expo_push_token: Mapped[Optional[str]] = mapped_column(String(200), nullable=True)
+    # Set once, the first time this account ever signs in via POST /student/auth/resume - the
+    # only reliable "has this person used the app" signal. telegram_id alone can't answer that:
+    # an existing Telegram user who later opens the app keeps their telegram_id, so admin needs
+    # both this and telegram_id to show accurate Telegram/App badges for a dual-channel student.
+    app_seen_at: Mapped[Optional[datetime]] = mapped_column(TZDateTime, nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(TZDateTime, nullable=False, default=utcnow)
     updated_at: Mapped[datetime] = mapped_column(

@@ -215,7 +215,7 @@ export async function completeOnboarding(categoryIds: number[], jobTypes: JobTyp
 // ---------------------------------------------------------------------------
 // Meta (public, no auth needed)
 // ---------------------------------------------------------------------------
-export async function getCategories(lang: string = "mr") {
+export async function getCategories(lang: string = "en") {
   const { data } = await apiClient.get<CategoryOut[]>("/student/categories", { params: { lang } });
   return data;
 }

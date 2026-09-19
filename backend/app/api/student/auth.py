@@ -23,7 +23,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.student.deps import STUDENT_ROLE, current_student
 from app.api.student.schemas import AuthOut, MeOut, StudentOut
-from app.db.models import User
+from app.db.models import User, utcnow
 from app.db.session import get_db
 from app.services import ratelimit
 from app.services.access import access_until, has_access, in_trial
@@ -115,6 +115,9 @@ async def signup_with_resume(
         raise HTTPException(status_code=403, detail="This account has been blocked")
     elif not user.full_name and chosen_name:
         user.full_name = chosen_name
+
+    if user.app_seen_at is None:
+        user.app_seen_at = utcnow()
 
     await apply_resume_to_user(db, user, data, resolved_mime, filename, result)
 

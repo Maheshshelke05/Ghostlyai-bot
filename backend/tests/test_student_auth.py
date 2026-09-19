@@ -78,6 +78,31 @@ async def test_signup_new_user_creates_app_only_account_from_resume(client, cate
     assert body["access_token"]
 
 
+async def test_signup_sets_app_seen_at_for_admin_visibility(client, db, categories, monkeypatch):
+    """app_seen_at is the only reliable "used the app" signal for admin - it must be set on
+    both brand-new signups and existing Telegram users recognized by phone, and once set,
+    never cleared by a later signup."""
+    telegram_user = await make_user(db, phone="+919876500013", status="active", category_slugs=["it-software"])
+    from app.services.access import start_trial
+
+    await start_trial(db, telegram_user)
+    await db.commit()
+    assert telegram_user.app_seen_at is None
+
+    monkeypatch.setattr(
+        "app.services.resume_intake.ai.parse_resume",
+        _fake_parse_resume(_resume(phone="9876500013")),
+    )
+    monkeypatch.setattr("app.services.resume_intake.storage.save_resume", _fake_save_resume)
+
+    resp = await client.post("/student/auth/resume", files=_resume_file())
+    assert resp.status_code == 200, resp.text
+
+    await db.refresh(telegram_user)
+    assert telegram_user.app_seen_at is not None
+    assert telegram_user.telegram_id is not None  # still a Telegram user too - both true now
+
+
 async def test_signup_prefers_app_typed_name_over_resume_extraction(client, categories, monkeypatch):
     monkeypatch.setattr(
         "app.services.resume_intake.ai.parse_resume",

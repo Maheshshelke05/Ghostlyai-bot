@@ -1,6 +1,7 @@
 import { FlashList } from "@shopify/flash-list";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { router } from "expo-router";
+import { MotiView } from "moti";
 import { useState } from "react";
 import { Pressable, Text, View } from "react-native";
 
@@ -70,7 +71,7 @@ export default function SupportInboxScreen() {
         <FlashList
           data={threads}
           keyExtractor={(t) => String(t.user_id)}
-          renderItem={({ item }) => <ThreadRow thread={item} />}
+          renderItem={({ item, index }) => <ThreadRow thread={item} index={index} />}
           onEndReached={() => {
             if (hasNextPage && !isFetchingNextPage) fetchNextPage();
           }}
@@ -84,29 +85,35 @@ export default function SupportInboxScreen() {
   );
 }
 
-function ThreadRow({ thread }: { thread: SupportThread }) {
+function ThreadRow({ thread, index }: { thread: SupportThread; index: number }) {
   const name = thread.full_name || thread.username || `User #${thread.user_id}`;
   return (
-    <Pressable
-      onPress={() => router.push(`/support/${thread.user_id}`)}
-      className="bg-surface rounded-2xl px-4 py-3.5 mb-2 mx-4 flex-row items-center active:opacity-70"
+    <MotiView
+      from={{ opacity: 0, translateY: 10 }}
+      animate={{ opacity: 1, translateY: 0 }}
+      transition={{ type: "timing", duration: 220, delay: Math.min(index, 6) * 30 }}
     >
-      <View className="w-11 h-11 rounded-full bg-brand-soft items-center justify-center mr-3">
-        <Text className="text-brand font-bold text-base">{name.trim().charAt(0).toUpperCase()}</Text>
-      </View>
-      <View className="flex-1">
-        <View className="flex-row items-center justify-between">
-          <Text className="text-[16px] font-semibold text-ink" numberOfLines={1}>
-            {name}
-          </Text>
-          <Text className="text-xs text-muted ml-2">{timeAgo(thread.last_at)}</Text>
+      <Pressable
+        onPress={() => router.push(`/support/${thread.user_id}`)}
+        className="bg-surface rounded-2xl px-4 py-3.5 mb-2 mx-4 flex-row items-center active:opacity-70"
+      >
+        <View className="w-11 h-11 rounded-full bg-brand-soft items-center justify-center mr-3">
+          <Text className="text-brand font-bold text-base">{name.trim().charAt(0).toUpperCase()}</Text>
         </View>
-        <Text className="text-[14px] text-muted mt-0.5" numberOfLines={1}>
-          {thread.last_direction === "out" ? "You: " : ""}
-          {thread.last_message ?? ""}
-        </Text>
-      </View>
-      {thread.awaiting_reply ? <View className="w-2.5 h-2.5 rounded-full bg-brand ml-3" /> : null}
-    </Pressable>
+        <View className="flex-1">
+          <View className="flex-row items-center justify-between">
+            <Text className="text-[16px] font-semibold text-ink" numberOfLines={1}>
+              {name}
+            </Text>
+            <Text className="text-xs text-muted ml-2">{timeAgo(thread.last_at)}</Text>
+          </View>
+          <Text className="text-[14px] text-muted mt-0.5" numberOfLines={1}>
+            {thread.last_direction === "out" ? "You: " : ""}
+            {thread.last_message ?? ""}
+          </Text>
+        </View>
+        {thread.awaiting_reply ? <View className="w-2.5 h-2.5 rounded-full bg-brand ml-3" /> : null}
+      </Pressable>
+    </MotiView>
   );
 }

@@ -48,6 +48,7 @@ def _user_row(user: User) -> dict:
         "id": user.id, "telegram_id": user.telegram_id, "username": user.username,
         "full_name": user.full_name, "phone": user.phone, "district": user.district,
         "language": user.language, "status": user.status,
+        "app_seen_at": user.app_seen_at.isoformat() if user.app_seen_at else None,
         "access": _access_label(user, now),
         "access_until": until.isoformat() if until else None,
         "categories": [link.category.slug for link in user.category_links],

@@ -118,7 +118,18 @@ export default function UserDetailScreen() {
           </View>
 
           <View className="mt-3 gap-1">
-            <InfoLine label="Signed up via" value={user.telegram_id === null ? "App (resume upload)" : "Telegram"} />
+            <InfoLine
+              label="Active on"
+              value={
+                user.telegram_id !== null && user.app_seen_at !== null
+                  ? "Telegram + App"
+                  : user.telegram_id !== null
+                    ? "Telegram"
+                    : user.app_seen_at !== null
+                      ? "App"
+                      : "-"
+              }
+            />
             <InfoLine label="Phone" value={user.phone ?? "-"} />
             <InfoLine label="Telegram" value={user.username ? `@${user.username}` : "-"} />
             <InfoLine label="Language" value={user.language} />

@@ -1,6 +1,6 @@
 import { router } from "expo-router";
 import { MotiView } from "moti";
-import { useState } from "react";
+import { memo, useState } from "react";
 import { Platform, Pressable, Text, View } from "react-native";
 
 import { Badge } from "@/components/ui/Badge";
@@ -26,7 +26,7 @@ const cardShadow = Platform.select({
   default: {},
 });
 
-export function JobCard({ job, index = 0 }: { job: JobOut; index?: number }) {
+export const JobCard = memo(function JobCard({ job, index = 0 }: { job: JobOut; index?: number }) {
   const days = daysUntil(job.last_date);
   const urgent = days !== null && days <= 3;
   const [pressed, setPressed] = useState(false);
@@ -35,7 +35,7 @@ export function JobCard({ job, index = 0 }: { job: JobOut; index?: number }) {
     <MotiView
       from={{ opacity: 0, translateY: 14 }}
       animate={{ opacity: 1, translateY: 0 }}
-      transition={{ type: "timing", duration: 260, delay: Math.min(index, 8) * 35 }}
+      transition={{ type: "timing", duration: 220, delay: Math.min(index, 5) * 25 }}
     >
     <MotiView
       animate={{ scale: pressed ? 0.97 : 1 }}
@@ -84,4 +84,4 @@ export function JobCard({ job, index = 0 }: { job: JobOut; index?: number }) {
     </MotiView>
     </MotiView>
   );
-}
+});

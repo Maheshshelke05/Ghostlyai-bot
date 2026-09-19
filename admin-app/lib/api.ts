@@ -152,13 +152,17 @@ export interface CategoryOut {
 
 export interface UserRow {
   id: number;
-  telegram_id: number | null; // null = signed up via the student app, never touched Telegram
+  telegram_id: number | null; // null = never linked a Telegram account
   username: string | null;
   full_name: string | null;
   phone: string | null;
   district: string | null;
   language: string;
   status: string;
+  // Set the first time this account ever used the app - independent of telegram_id, since an
+  // existing Telegram user who later opens the app keeps their telegram_id. A student can be
+  // Telegram-only, app-only, or both (check telegram_id and app_seen_at separately).
+  app_seen_at: string | null;
   access: "paid" | "trial" | "none";
   access_until: string | null;
   categories: string[];
@@ -531,7 +535,9 @@ export interface SupportThread {
 export interface SupportMessageOut {
   id: number;
   direction: "in" | "out";
+  subject: string | null;
   text: string;
+  image_url: string | null;
   created_at: string;
 }
 

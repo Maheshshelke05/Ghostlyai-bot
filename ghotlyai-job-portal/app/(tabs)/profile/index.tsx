@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { router } from "expo-router";
+import * as WebBrowser from "expo-web-browser";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -71,6 +72,12 @@ export default function ProfileScreen() {
 
         <Row emoji="💳" label="Subscription" onPress={() => router.push("/(tabs)/subscription")} />
         <Row emoji="💬" label="Support" onPress={() => router.push("/support")} />
+
+        <View className="mt-4">
+          <Row emoji="👻" label="About GhotlyAI" onPress={() => WebBrowser.openBrowserAsync("https://ghotlyai.in")} />
+          <Row emoji="🔒" label="Privacy Policy" onPress={() => router.push("/privacy-policy")} />
+          <Row emoji="📄" label="Terms & Conditions" onPress={() => router.push("/terms")} />
+        </View>
 
         <View className="mt-4">
           <Row emoji="🚪" label="Log out" onPress={logout} tone="danger" />

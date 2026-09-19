@@ -27,7 +27,8 @@ export function UserRow({ user }: { user: UserRowType }) {
           <Text className="text-base font-semibold text-ink" numberOfLines={1}>
             {user.full_name || "Unnamed"}
           </Text>
-          {user.telegram_id === null ? <Badge label="App" tone="info" /> : null}
+          {user.telegram_id !== null ? <Badge label="Telegram" tone="info" /> : null}
+          {user.app_seen_at !== null ? <Badge label="App" tone="brand" /> : null}
         </View>
         <Text className="text-xs text-muted mt-0.5" numberOfLines={1}>
           {user.categories.join(", ") || "No categories"}

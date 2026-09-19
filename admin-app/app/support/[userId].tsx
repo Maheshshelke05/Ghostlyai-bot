@@ -1,8 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { router, useLocalSearchParams } from "expo-router";
+import { MotiView } from "moti";
 import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Image,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -14,7 +16,8 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useToast } from "@/components/ui/Toast";
-import { apiErrorMessage, getSupportThread, replySupport, type SupportMessageOut } from "@/lib/api";
+import { API_URL, apiErrorMessage, getSupportThread, replySupport, type SupportMessageOut } from "@/lib/api";
+import { useAuthStore } from "@/store/auth";
 
 function stamp(iso: string): string {
   const d = new Date(iso);
@@ -93,8 +96,8 @@ export default function SupportThreadScreen() {
         contentContainerStyle={{ padding: 16, paddingBottom: 12 }}
         keyboardShouldPersistTaps="handled"
       >
-        {data.messages.map((m) => (
-          <Bubble key={m.id} message={m} />
+        {data.messages.map((m, i) => (
+          <Bubble key={m.id} message={m} index={i} />
         ))}
       </ScrollView>
 
@@ -128,14 +131,33 @@ export default function SupportThreadScreen() {
   );
 }
 
-function Bubble({ message }: { message: SupportMessageOut }) {
+function Bubble({ message, index }: { message: SupportMessageOut; index: number }) {
   const mine = message.direction === "out";
+  const token = useAuthStore((s) => s.token);
+
   return (
-    <View className={`mb-2 max-w-[82%] ${mine ? "self-end" : "self-start"}`}>
+    <MotiView
+      from={{ opacity: 0, translateY: 8 }}
+      animate={{ opacity: 1, translateY: 0 }}
+      transition={{ type: "timing", duration: 200, delay: Math.min(index, 4) * 25 }}
+      className={`mb-2 max-w-[82%] ${mine ? "self-end" : "self-start"}`}
+    >
       <View className={`px-3.5 py-2.5 ${mine ? "bg-brand rounded-[18px] rounded-br-md" : "bg-surface rounded-[18px] rounded-bl-md"}`}>
-        <Text className={`text-[16px] ${mine ? "text-white" : "text-ink"}`}>{message.text}</Text>
+        {message.subject ? (
+          <Text className={`text-[12px] font-bold mb-1 ${mine ? "text-white" : "text-ink"}`}>{message.subject}</Text>
+        ) : null}
+        {message.image_url ? (
+          <Image
+            source={{ uri: `${API_URL}${message.image_url}`, headers: { Authorization: `Bearer ${token}` } }}
+            style={{ width: 180, height: 180, borderRadius: 10, marginBottom: message.text ? 8 : 0 }}
+            resizeMode="cover"
+          />
+        ) : null}
+        {message.text ? (
+          <Text className={`text-[16px] ${mine ? "text-white" : "text-ink"}`}>{message.text}</Text>
+        ) : null}
       </View>
       <Text className={`text-[11px] text-muted mt-1 ${mine ? "text-right mr-1" : "ml-1"}`}>{stamp(message.created_at)}</Text>
-    </View>
+    </MotiView>
   );
 }

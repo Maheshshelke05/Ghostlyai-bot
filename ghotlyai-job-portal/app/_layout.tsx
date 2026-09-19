@@ -62,6 +62,8 @@ export default function RootLayout() {
                 <Stack.Screen name="filters" options={{ presentation: "modal", headerShown: true, title: "Filters" }} />
                 <Stack.Screen name="payment/checkout" options={{ headerShown: true, title: "Subscribe" }} />
                 <Stack.Screen name="support" options={{ headerShown: true, title: "Support" }} />
+                <Stack.Screen name="privacy-policy" options={{ headerShown: true, title: "Privacy Policy" }} />
+                <Stack.Screen name="terms" options={{ headerShown: true, title: "Terms & Conditions" }} />
               </Stack.Protected>
               <Stack.Protected guard={needsOnboarding}>
                 <Stack.Screen name="(onboarding)" />
