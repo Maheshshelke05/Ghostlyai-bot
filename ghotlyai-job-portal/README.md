@@ -8,46 +8,52 @@ logic.
 Placeholder name/branding (`JobKatta`, green `#16A34A`) — trivially renamed by editing
 `app.json`, `package.json` and `tailwind.config.js`.
 
-## Requires a custom EAS dev client, not Expo Go
+## Getting an installable APK
 
+**Primary path — GitHub Actions** (no EAS build servers, no Expo login needed to trigger it):
+`.github/workflows/build-student-apk.yml` builds a real signed release APK directly on a GitHub
+runner, the same way `build-admin-apk.yml` does for the admin app. See
+`docs/APP_RELEASE_STUDENT.md` for the one-time GitHub secrets setup and how to run it.
+
+**Local/dev path — EAS dev client**: needed only for live Metro reloading during development.
 Phone auth (`@react-native-firebase/auth`) and the native Razorpay Checkout SDK
-(`react-native-razorpay`) both need native modules Expo Go cannot load — same as `admin-app/`
-already requires. Build a development client before running the app:
+(`react-native-razorpay`) both need native modules Expo Go cannot load, so a plain `expo start`
+won't work either way.
 
 ```bash
 npm install
 eas build --profile development --platform android
 ```
 
-Install the resulting APK on a physical Android phone with a live SIM — phone-auth SMS
-auto-verification cannot be tested in an emulator or Expo Go.
+Either way, install the resulting APK on a physical Android phone with a live SIM — phone-auth
+SMS auto-verification cannot be tested in an emulator or Expo Go.
 
-## Before this can run for real
+## Setup status
 
-1. **`eas init`** (as your Expo account) to create the EAS project and populate
-   `app.json`'s `extra.eas.projectId` — not filled in yet, since that requires your login.
-2. **Firebase project** (console.firebase.google.com): enable **Phone** sign-in under
-   Authentication, then download:
-   - `google-services.json` → place at the repo root of this folder (Android)
-   - `GoogleService-Info.plist` → place at the repo root of this folder (iOS)
-   - A **service account key** (Project Settings → Service accounts → Generate new private
-     key) → set as `FIREBASE_SERVICE_ACCOUNT_JSON` in the **backend's** `.env` (the backend
-     verifies the ID token server-side; see `backend/app/services/firebase_auth.py`).
-3. **Razorpay**: the backend's existing `RAZORPAY_KEY_ID`/`RAZORPAY_KEY_SECRET` are reused for
-   the Orders API (`backend/app/services/razorpay_orders.py`) — no new keys needed. In the
-   Razorpay dashboard, make sure the webhook has the **`payment.captured`** event enabled
-   alongside whatever `payment_link.*` events are already on (this is the app payment flow's
-   defense-in-depth path, separate from the bot's Payment Links flow).
-4. **Backend migrations**: run `alembic upgrade head` against the production DB before this
-   app can log anyone in — migrations `0004_app_login_support` and `0005_razorpay_orders` add
-   the columns this app's API depends on.
-5. **Android Phone Number Hint** (auto-fill the number, zero typing): `lib/firebaseAuth.ts`'s
+Done:
+- EAS project created and linked (`app.json`'s `extra.eas.projectId`).
+- Firebase: Phone sign-in enabled, `google-services.json` in place, service account key wired
+  into the backend's `FIREBASE_SERVICE_ACCOUNT_JSON`, GitHub Actions secrets added.
+
+Still pending before this is fully live:
+1. **Razorpay webhook**: confirm the **`payment.captured`** event is enabled in the Razorpay
+   dashboard alongside whatever `payment_link.*` events are already on (the app payment flow's
+   defense-in-depth path, separate from the bot's Payment Links flow) — the backend's existing
+   `RAZORPAY_KEY_ID`/`RAZORPAY_KEY_SECRET` are reused as-is, no new keys needed.
+2. **Backend migrations**: run `alembic upgrade head` against the production DB before this app
+   can log anyone in — migrations `0004_app_login_support` and `0005_razorpay_orders` add the
+   columns this app's API depends on.
+3. **Firebase SHA fingerprints**: add this app's release keystore's SHA-1/SHA-256 to the
+   Firebase console (`com.jobalertbot.student` app → Add fingerprint) for reliable phone-auth
+   auto-verification — see `docs/APP_RELEASE_STUDENT.md`.
+4. **Android Phone Number Hint** (auto-fill the number, zero typing): `lib/firebaseAuth.ts`'s
    `getPhoneNumberHint()` is currently a stub that always returns `null` — the login screen's
    manual entry field is what actually works today. Wiring a real implementation (Google
    Identity Services' Phone Number Hint API has no first-party Expo/RNFirebase wrapper yet) is
    the one upgrade needed to get the fully "just tap confirm" flow; everything else is unaffected.
-6. **App icons/splash**: `assets/*.png` are placeholder green marks generated for this build,
+5. **App icons/splash**: `assets/*.png` are placeholder green marks generated for this build,
    not final artwork — swap them before a real store listing.
+6. **iOS**: `GoogleService-Info.plist` not provided yet — this app is Android-first for now.
 
 ## Structure
 
