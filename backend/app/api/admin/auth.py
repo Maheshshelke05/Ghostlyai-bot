@@ -15,18 +15,10 @@ from app.services.auth import create_token, hash_password, verify_password
 router = APIRouter(prefix="/admin/auth", tags=["admin-auth"])
 
 
-def _client_ip(request: Request) -> str:
-    # Render (and any proxy) puts the real client in X-Forwarded-For; first hop is the client.
-    forwarded = request.headers.get("x-forwarded-for", "")
-    if forwarded:
-        return forwarded.split(",")[0].strip()
-    return request.client.host if request.client else "unknown"
-
-
 @router.post("/login", response_model=TokenOut)
 async def login(payload: LoginIn, request: Request, db: AsyncSession = Depends(get_db)) -> TokenOut:
     email = payload.email.lower()
-    limit_key = f"{_client_ip(request)}|{email}"
+    limit_key = f"{ratelimit.client_ip(request)}|{email}"
     wait = ratelimit.seconds_until_allowed(limit_key)
     if wait:
         raise HTTPException(

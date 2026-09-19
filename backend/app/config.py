@@ -13,10 +13,7 @@ class Settings(BaseSettings):
 
     # ---------- App ----------
     APP_ENV: str = "development"  # development | production
-    # Render web services get RENDER_EXTERNAL_URL injected automatically; used as a fallback
-    # so BASE_URL doesn't have to be hardcoded for the web service (the worker, which has no
-    # public URL of its own, still needs BASE_URL set explicitly - see render.yaml).
-    BASE_URL: str = os.environ.get("RENDER_EXTERNAL_URL") or "http://localhost:8000"
+    BASE_URL: str = "http://localhost:8000"
     TIMEZONE: str = "Asia/Kolkata"
     CORS_ORIGINS: str = "*"
 
@@ -60,10 +57,9 @@ class Settings(BaseSettings):
     # ---------- Scheduler ----------
     # When true, the API process itself runs the APScheduler jobs (digest, reminders, expiry,
     # broadcasts) in-process instead of expecting a separate `app.workers.scheduler` process.
-    # For a single free-tier web service with no paid background worker (Render's free plan has
-    # no worker option at all) - NEVER combine with more than one uvicorn worker process
-    # (`--workers N > 1`), each would run its own copy of every scheduled job and send every
-    # digest N times.
+    # For a single-container deployment with no separate worker process - NEVER combine with
+    # more than one uvicorn worker process (`--workers N > 1`), each would run its own copy of
+    # every scheduled job and send every digest N times.
     RUN_SCHEDULER_IN_API: bool = False
 
     @property

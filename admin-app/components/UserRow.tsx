@@ -1,7 +1,7 @@
 import { router } from "expo-router";
 import { Pressable, Text, View } from "react-native";
 
-import { AccessBadge } from "@/components/ui/Badge";
+import { AccessBadge, Badge } from "@/components/ui/Badge";
 import type { UserRow as UserRowType } from "@/lib/api";
 
 function initials(name: string | null): string {
@@ -23,9 +23,12 @@ export function UserRow({ user }: { user: UserRowType }) {
         <Text className="text-brand-ink font-bold">{initials(user.full_name)}</Text>
       </View>
       <View className="flex-1">
-        <Text className="text-base font-semibold text-ink" numberOfLines={1}>
-          {user.full_name || "Unnamed"}
-        </Text>
+        <View className="flex-row items-center gap-1.5">
+          <Text className="text-base font-semibold text-ink" numberOfLines={1}>
+            {user.full_name || "Unnamed"}
+          </Text>
+          {user.telegram_id === null ? <Badge label="App" tone="info" /> : null}
+        </View>
         <Text className="text-xs text-muted mt-0.5" numberOfLines={1}>
           {user.categories.join(", ") || "No categories"}
         </Text>

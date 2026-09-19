@@ -191,6 +191,13 @@ async def client(engine, monkeypatch):
 
     import app.main as main_module
     from app.db.session import get_db
+    from app.services import ratelimit
+
+    # The rate limiter's state is a module-level, in-process dict (by design - see
+    # ratelimit.py) so it survives across tests unless reset; every test's requests share the
+    # same test-client "IP", so without this a test late in a run can trip a limit meant for a
+    # real attacker, not a test suite exercising the same endpoint many times.
+    ratelimit.reset_all()
 
     session_factory = async_sessionmaker(engine, expire_on_commit=False, autoflush=False)
 

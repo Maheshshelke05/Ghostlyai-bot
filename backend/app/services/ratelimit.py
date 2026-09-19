@@ -1,19 +1,31 @@
-"""Tiny in-process sliding-window limiter for the admin login endpoint.
+"""Tiny in-process sliding-window limiter, shared by any endpoint that needs one.
 
-bcrypt already makes each guess slow, but nothing stopped an attacker from hammering
-/admin/auth/login. This caps failed attempts per (client IP, email) so credential stuffing
-gets a 429 long before it gets anywhere. In-process is fine: the API runs as one instance,
-and the worst case on a restart is a reset window.
+Originally built for /admin/auth/login (bcrypt already makes each guess slow, but nothing
+stopped an attacker from hammering the endpoint - this caps failed attempts per (client IP,
+email) so credential stuffing gets a 429 long before it gets anywhere). Also used by public,
+unauthenticated endpoints that cost real money per call (e.g. POST /student/auth/resume, which
+triggers a Gemini call on every attempt) to cap attempts per IP regardless of outcome. In-process
+is fine: the API runs as one instance, and the worst case on a restart is a reset window.
 """
 from __future__ import annotations
 
 import time
 from collections import defaultdict, deque
 
+from fastapi import Request
+
 MAX_FAILURES = 10
 WINDOW_SECONDS = 15 * 60
 
 _failures: dict[str, deque[float]] = defaultdict(deque)
+
+
+def client_ip(request: Request) -> str:
+    """Best-effort real client IP behind a reverse proxy (nginx sets X-Forwarded-For)."""
+    forwarded = request.headers.get("x-forwarded-for", "")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    return request.client.host if request.client else "unknown"
 
 
 def _prune(key: str, now: float) -> deque[float]:
@@ -37,6 +49,12 @@ def seconds_until_allowed(key: str) -> int:
 
 def record_failure(key: str) -> None:
     _failures[key].append(time.monotonic())
+
+
+def record_attempt(key: str) -> None:
+    """Alias for record_failure - use this name where every attempt (not just failed ones)
+    should count against the window, e.g. capping resume uploads regardless of outcome."""
+    record_failure(key)
 
 
 def clear(key: str) -> None:

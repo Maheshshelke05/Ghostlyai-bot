@@ -9,7 +9,7 @@ reused as-is (their existing profile is trusted) - otherwise a new app-only User
 """
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -17,6 +17,7 @@ from app.api.student.deps import STUDENT_ROLE, current_student
 from app.api.student.schemas import AuthOut, MeOut, StudentOut
 from app.db.models import User
 from app.db.session import get_db
+from app.services import ratelimit
 from app.services.access import access_until, has_access, in_trial
 from app.services.auth import create_token
 from app.services.resume_intake import (
@@ -66,8 +67,21 @@ def to_out(user: User) -> StudentOut:
 
 @router.post("/resume", response_model=AuthOut)
 async def signup_with_resume(
-    file: UploadFile = File(...), db: AsyncSession = Depends(get_db)
+    request: Request, file: UploadFile = File(...), db: AsyncSession = Depends(get_db)
 ) -> AuthOut:
+    # Unauthenticated by design (this IS signup) and every attempt costs a real Gemini call
+    # regardless of outcome, so cap attempts per IP - otherwise anyone can spam this for free
+    # to run up the Gemini bill and fill the DB with junk users.
+    limit_key = f"resume|{ratelimit.client_ip(request)}"
+    wait = ratelimit.seconds_until_allowed(limit_key)
+    if wait:
+        raise HTTPException(
+            status_code=429,
+            detail="Too many resume uploads from this network. Try again in a few minutes.",
+            headers={"Retry-After": str(wait)},
+        )
+    ratelimit.record_attempt(limit_key)
+
     data, resolved_mime, filename = await read_and_validate_resume(file)
     result = await parse_resume_for_signup(db, data, resolved_mime)
 

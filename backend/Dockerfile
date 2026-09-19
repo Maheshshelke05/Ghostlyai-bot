@@ -22,6 +22,5 @@ COPY . .
 RUN useradd -m appuser && mkdir -p /data/resumes && chown -R appuser /data /app
 USER appuser
 
-# Shell form so ${PORT} expands: Render (and similar PaaS hosts) inject PORT at runtime;
-# falls back to 8000 for docker-compose / local use where PORT isn't set.
+# Shell form so ${PORT} expands if ever set; falls back to 8000 for docker-compose / local use.
 CMD uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000} --proxy-headers

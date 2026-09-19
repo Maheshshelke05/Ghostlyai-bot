@@ -118,6 +118,7 @@ export default function UserDetailScreen() {
           </View>
 
           <View className="mt-3 gap-1">
+            <InfoLine label="Signed up via" value={user.telegram_id === null ? "App (resume upload)" : "Telegram"} />
             <InfoLine label="Phone" value={user.phone ?? "-"} />
             <InfoLine label="Telegram" value={user.username ? `@${user.username}` : "-"} />
             <InfoLine label="Language" value={user.language} />
@@ -307,11 +308,15 @@ const MessageSheet = forwardRef<BottomSheetModal, { userId: number }>(function M
     try {
       const res = await messageUser(userId, text.trim());
       const outcome: Record<string, string> = {
-        ok: "Message sent",
+        ok: "Message sent via Telegram",
         blocked: "Not delivered - this student has blocked the bot",
         error: "Message could not be sent",
+        skipped: "Sent via push notification (this student signed up via the app, not Telegram)",
       };
-      show(outcome[res.result] ?? `Result: ${res.result}`, res.result === "ok" ? "success" : "warn");
+      show(
+        outcome[res.result] ?? `Result: ${res.result}`,
+        res.result === "ok" || res.result === "skipped" ? "success" : "warn"
+      );
       setText("");
       (ref as React.RefObject<BottomSheetModal>).current?.dismiss();
     } catch (err) {

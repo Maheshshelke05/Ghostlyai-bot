@@ -48,10 +48,10 @@ async def _check_redis() -> bool:
 def _run_migrations() -> None:
     """Runs Alembic migrations synchronously (in a worker thread) against DATABASE_URL.
 
-    Hosts like Render have no built-in "run this before starting the web process" step for
-    Docker-runtime services, so the API applies pending migrations itself on boot. Only runs
-    in production - local/dev workflows keep running `alembic upgrade head` by hand so an
-    in-progress local migration isn't silently auto-applied.
+    Docker Compose has no built-in "run this before starting the web process" step, so the API
+    applies pending migrations itself on boot. Only runs in production - local/dev workflows
+    keep running `alembic upgrade head` by hand so an in-progress local migration isn't silently
+    auto-applied.
     """
     import os
 

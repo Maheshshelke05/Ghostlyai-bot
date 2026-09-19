@@ -2,9 +2,8 @@
 
 Uses Cloudinary (as a private "authenticated" asset, delivered only via short-lived signed
 URLs - never a public link) whenever CLOUDINARY_URL is configured, since that's required on
-hosts with an ephemeral filesystem (Render, Heroku-style). Falls back to local disk under
-UPLOAD_DIR when Cloudinary isn't configured, which is fine for a VPS with a persistent volume
-or for local development.
+hosts with an ephemeral filesystem. Falls back to local disk under UPLOAD_DIR when Cloudinary
+isn't configured, which is fine for a VPS with a persistent volume or for local development.
 
 Cloudinary quirk this module works around: for resource_type="raw", the file's extension is
 part of its public_id's identity (Cloudinary appends `format` onto `public_id` at upload time

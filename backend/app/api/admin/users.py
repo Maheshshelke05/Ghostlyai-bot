@@ -27,6 +27,7 @@ from app.services.access import (
     reactivate_if_bot_blocked,
 )
 from app.services.notifier import safe_send
+from app.services.push import send_push_to_student
 from app.services.storage import delete_resume, get_resume_url
 
 router = APIRouter(prefix="/admin/users", tags=["admin-users"])
@@ -173,6 +174,12 @@ async def extend_user(
         )
         if result == "blocked":
             user.status = "bot_blocked"
+        # Push is separate from (never a substitute for) the Telegram send above - an app-only
+        # student (telegram_id=None) gets "skipped" for `result` and relies on push alone.
+        await send_push_to_student(
+            user, "Subscription extended", f"Access extended until {format_date_ist(sub.end_at)}",
+            {"type": "subscription"},
+        )
     await db.flush()
 
     return {"access_until": sub.end_at.isoformat()}
@@ -189,6 +196,10 @@ async def message_user(
     if result == "blocked":
         user.status = "bot_blocked"
         await db.flush()
+    # Push is separate from (never a substitute for) the Telegram send above - an app-only
+    # student (telegram_id=None) gets "skipped" for `result` and relies on push alone.
+    preview = payload.text if len(payload.text) <= 120 else payload.text[:117] + "..."
+    await send_push_to_student(user, "Message from admin", preview, {"type": "admin_message"})
     return {"result": result}
 
 

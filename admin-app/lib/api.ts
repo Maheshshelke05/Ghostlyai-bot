@@ -152,7 +152,7 @@ export interface CategoryOut {
 
 export interface UserRow {
   id: number;
-  telegram_id: number;
+  telegram_id: number | null; // null = signed up via the student app, never touched Telegram
   username: string | null;
   full_name: string | null;
   phone: string | null;
