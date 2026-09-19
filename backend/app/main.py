@@ -64,6 +64,32 @@ def _run_migrations() -> None:
     command.upgrade(cfg, "head")
 
 
+# Fixed, arbitrary key - just needs to be the same constant on every process migrating this DB.
+_MIGRATION_LOCK_KEY = 727401319
+
+
+async def _run_migrations_serialized() -> None:
+    """Wraps _run_migrations() in a Postgres advisory lock so it's safe to call from every
+    uvicorn worker process's own lifespan startup (--workers 2+ each run this independently) -
+    without this, two workers booting at once both run `alembic upgrade head` concurrently,
+    which races on the same DDL and can kill one of the worker processes mid-migration."""
+    import asyncio
+
+    import asyncpg
+
+    from app.db.session import _prepare_asyncpg_url
+
+    raw_url, connect_kwargs = _prepare_asyncpg_url(settings.DATABASE_URL)
+    dsn = raw_url.replace("postgresql+asyncpg://", "postgresql://", 1)
+    conn = await asyncpg.connect(dsn, **connect_kwargs)
+    try:
+        await conn.execute("SELECT pg_advisory_lock($1)", _MIGRATION_LOCK_KEY)
+        await asyncio.to_thread(_run_migrations)
+    finally:
+        await conn.execute("SELECT pg_advisory_unlock($1)", _MIGRATION_LOCK_KEY)
+        await conn.close()
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("Starting Student Job Alert Bot API (env=%s)", settings.APP_ENV)
@@ -78,7 +104,7 @@ async def lifespan(app: FastAPI):
             logger.warning("TELEGRAM_WEBHOOK_SECRET is empty: the Telegram webhook is not authenticated")
 
         logger.info("Running database migrations...")
-        await asyncio.to_thread(_run_migrations)
+        await _run_migrations_serialized()
         logger.info("Migrations up to date")
 
     if settings.is_production and settings.BOT_TOKEN:
