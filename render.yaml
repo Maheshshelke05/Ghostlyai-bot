@@ -1,5 +1,9 @@
 # Render Blueprint. Deploy: render.com -> New -> Blueprint -> pick this repo.
 #
+# NOTE: production has moved to a self-hosted VPS (docs/DEPLOY.md) - Render's own database was
+# in a different region than this app's server, and every query paid that network round trip.
+# This file is kept as a free/no-VPS fallback option, not what's currently live.
+#
 # Single FREE web service, no card required. The digest/reminders/expiry/broadcast scheduler
 # runs embedded inside this same process (RUN_SCHEDULER_IN_API=true) instead of as a separate
 # Render "worker" service - Render has no free tier for background workers at all, only for web
