@@ -52,7 +52,7 @@ export default function WelcomeScreen() {
               3 days free, then just ₹99 for 30 days. No hidden charges.
             </Text>
           </View>
-          <Button label="Get started" onPress={() => router.push("/(auth)/login")} />
+          <Button label="Get started" onPress={() => router.push("/(auth)/resume")} />
         </MotiView>
       </SafeAreaView>
     </View>

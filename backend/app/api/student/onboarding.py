@@ -1,6 +1,8 @@
-"""Onboarding endpoints for the student app: name -> district -> resume (optional) ->
-complete (categories + job types) - mirrors backend/app/bot/handlers/onboarding.py step-by-step,
-one API-friendly step at a time instead of aiogram's FSM.
+"""Onboarding endpoints for the student app: name -> district -> complete (categories + job
+types) - mirrors backend/app/bot/handlers/onboarding.py step-by-step, one API-friendly step at
+a time instead of aiogram's FSM. Resume upload itself now happens at signup
+(app/api/student/auth.py::signup_with_resume); this router keeps the authenticated re-upload
+endpoint for updating it later.
 """
 from __future__ import annotations
 
@@ -15,39 +17,24 @@ from app.api.student.schemas import (
     DistrictIn,
     MeOut,
     NameIn,
+    PhoneIn,
     PushTokenIn,
     ResumeSummaryOut,
 )
-from app.config import settings
-from app.db.models import Category, Profile, User, UserCategory
+from app.db.models import Category, User, UserCategory
 from app.db.session import get_db
-from app.services import ai, storage
 from app.services.access import get_setting, start_trial
 from app.services.districts import canonical_district
 from app.services.jobs import JOB_TYPES
 from app.services.push import send_push_to_admins
-from app.services.validators import normalize_name, valid_name
+from app.services.resume_intake import (
+    apply_resume_to_user,
+    parse_resume_for_signup,
+    read_and_validate_resume,
+)
+from app.services.validators import normalize_name, normalize_phone, valid_name
 
 router = APIRouter(prefix="/student/me", tags=["student-onboarding"])
-
-_RESUME_MIME_BY_EXT = {
-    ".pdf": "application/pdf",
-    ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-    ".jpg": "image/jpeg",
-    ".jpeg": "image/jpeg",
-    ".png": "image/png",
-    ".webp": "image/webp",
-}
-_SUPPORTED_RESUME_MIMES = set(_RESUME_MIME_BY_EXT.values())
-
-
-async def _active_categories(db: AsyncSession) -> list[Category]:
-    rows = (
-        await db.execute(
-            select(Category).where(Category.is_active.is_(True)).order_by(Category.sort_order)
-        )
-    ).scalars().all()
-    return list(rows)
 
 
 @router.put("/name", response_model=MeOut)
@@ -73,58 +60,33 @@ async def set_district(
     return MeOut(user=to_out(user), next_step=next_step(user))
 
 
+@router.put("/phone", response_model=MeOut)
+async def set_phone(
+    payload: PhoneIn, user: User = Depends(current_student), db: AsyncSession = Depends(get_db)
+) -> MeOut:
+    """Manual fallback when the resume had no phone number (or the wrong one) - trusted as
+    typed, same as everything else about this signup flow; not re-verified."""
+    phone = normalize_phone(payload.phone)
+    existing = (
+        await db.execute(select(User).where(User.phone == phone, User.id != user.id))
+    ).scalar_one_or_none()
+    if existing is not None:
+        raise HTTPException(status_code=400, detail="This number is already registered")
+    user.phone = phone
+    await db.flush()
+    return MeOut(user=to_out(user), next_step=next_step(user))
+
+
 @router.post("/resume", response_model=ResumeSummaryOut)
 async def upload_resume(
     file: UploadFile = File(...),
     user: User = Depends(current_student),
     db: AsyncSession = Depends(get_db),
 ) -> ResumeSummaryOut:
-    filename = file.filename or ""
-    ext = "." + filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
-    mime = file.content_type or ""
-    resolved_mime = mime if mime in _SUPPORTED_RESUME_MIMES else _RESUME_MIME_BY_EXT.get(ext)
-    if resolved_mime is None:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Unsupported file type. Use PDF, DOCX or a photo (max {settings.MAX_RESUME_MB}MB).",
-        )
-
-    data = await file.read()
-    max_bytes = settings.MAX_RESUME_MB * 1024 * 1024
-    if len(data) > max_bytes:
-        raise HTTPException(status_code=400, detail=f"File too large. Max {settings.MAX_RESUME_MB}MB.")
-
-    categories = {c.slug: c.name for c in await _active_categories(db)}
-    result = await ai.parse_resume(data, resolved_mime, categories)
-    if result is None:
-        raise HTTPException(status_code=422, detail="Could not read this file. Try a clearer PDF or photo.")
-    if not result.is_resume:
-        raise HTTPException(status_code=422, detail="This doesn't look like a resume.")
-
-    profile = user.profile
-    path = await storage.save_resume(
-        user.id, data, resolved_mime, filename,
-        previous_resume_path=profile.resume_path if profile else None,
-    )
-    if profile is None:
-        profile = Profile(user_id=user.id)
-        db.add(profile)
-        user.profile = profile
-
-    profile.education = result.highest_education
-    profile.course = result.course
-    profile.skills = result.skills
-    profile.experience_years = result.experience_years or 0
-    profile.summary = result.summary
-    profile.resume_path = path
-    profile.resume_mime = resolved_mime
-    profile.parsed_json = result.model_dump()
-    await db.flush()
-
-    if not user.district and result.city_or_district:
-        canon = canonical_district(result.city_or_district)
-        user.district = canon if canon else result.city_or_district.title()
-        await db.flush()
+    """Re-upload/update the resume after signup (signup itself already captured one)."""
+    data, resolved_mime, filename = await read_and_validate_resume(file)
+    result = await parse_resume_for_signup(db, data, resolved_mime)
+    profile = await apply_resume_to_user(db, user, data, resolved_mime, filename, result)
 
     return ResumeSummaryOut(
         education=profile.education,

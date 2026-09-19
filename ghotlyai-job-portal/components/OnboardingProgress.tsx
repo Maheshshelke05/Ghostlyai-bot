@@ -1,6 +1,6 @@
 import { Text, View } from "react-native";
 
-const STEPS = ["Name", "District", "Resume", "Job type", "Categories"];
+const STEPS = ["Details", "District", "Job type", "Categories"];
 
 export function OnboardingProgress({ step }: { step: number }) {
   return (

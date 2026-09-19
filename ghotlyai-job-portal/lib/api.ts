@@ -72,6 +72,7 @@ export interface StudentOut {
   id: number;
   full_name: string | null;
   phone: string | null;
+  email: string | null;
   district: string | null;
   language: string;
   job_types: string[];
@@ -93,6 +94,7 @@ export interface AuthOut extends MeOut {
   access_token: string;
   token_type: string;
   is_new_user: boolean;
+  suggested_category_slugs: string[];
 }
 
 export interface CategoryOut {
@@ -158,8 +160,12 @@ export interface SupportMessageOut {
 // ---------------------------------------------------------------------------
 // Auth
 // ---------------------------------------------------------------------------
-export async function loginWithPhone(idToken: string) {
-  const { data } = await apiClient.post<AuthOut>("/student/auth/phone", { id_token: idToken });
+export async function signupWithResume(file: { uri: string; name: string; mimeType?: string }) {
+  const form = new FormData();
+  form.append("file", { uri: file.uri, name: file.name, type: file.mimeType || "application/pdf" } as any);
+  const { data } = await apiClient.post<AuthOut>("/student/auth/resume", form, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
   return data;
 }
 
@@ -182,6 +188,11 @@ export async function setName(fullName: string) {
 
 export async function setDistrict(district: string) {
   const { data } = await apiClient.put<MeOut>("/student/me/district", { district });
+  return data;
+}
+
+export async function setPhone(phone: string) {
+  const { data } = await apiClient.put<MeOut>("/student/me/phone", { phone });
   return data;
 }
 

@@ -88,6 +88,9 @@ class User(Base):
     username: Mapped[Optional[str]] = mapped_column(String(64))
     full_name: Mapped[Optional[str]] = mapped_column(String(120))
     phone: Mapped[Optional[str]] = mapped_column(String(20))
+    # Extracted from the resume at app signup (no OTP/verification of it - see
+    # api/student/auth.py::signup_with_resume). Never used for matching or login lookups.
+    email: Mapped[Optional[str]] = mapped_column(String(160))
     district: Mapped[Optional[str]] = mapped_column(String(60))
     language: Mapped[str] = mapped_column(String(5), nullable=False, default="mr")
     job_types: Mapped[list] = mapped_column(JSONBType, nullable=False, default=list)

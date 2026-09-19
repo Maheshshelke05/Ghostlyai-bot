@@ -10,14 +10,11 @@ from pydantic import BaseModel, Field
 # ---------------------------------------------------------------------------
 # Auth
 # ---------------------------------------------------------------------------
-class PhoneAuthIn(BaseModel):
-    id_token: str = Field(min_length=10)
-
-
 class StudentOut(BaseModel):
     id: int
     full_name: Optional[str] = None
     phone: Optional[str] = None
+    email: Optional[str] = None
     district: Optional[str] = None
     language: str
     job_types: list[str] = []
@@ -39,6 +36,7 @@ class AuthOut(MeOut):
     access_token: str
     token_type: str = "bearer"
     is_new_user: bool
+    suggested_category_slugs: list[str] = []
 
 
 class PushTokenIn(BaseModel):
@@ -54,6 +52,10 @@ class NameIn(BaseModel):
 
 class DistrictIn(BaseModel):
     district: str = Field(min_length=1, max_length=60)
+
+
+class PhoneIn(BaseModel):
+    phone: str = Field(min_length=10, max_length=20)
 
 
 class ResumeSummaryOut(BaseModel):

@@ -10,7 +10,7 @@ Repo → **Settings → Secrets and variables → Actions → New repository sec
 
 | Secret name | What it is |
 |---|---|
-| `STUDENT_GOOGLE_SERVICES_JSON_BASE64` | The Firebase `google-services.json` for `com.jobalertbot.student`, base64-encoded on one line |
+| `STUDENT_GOOGLE_SERVICES_JSON_BASE64` | The Firebase `google-services.json` for `com.jobalertbot.student` (used for push notifications only, not auth), base64-encoded on one line |
 | `STUDENT_ANDROID_RELEASE_KEYSTORE_BASE64` | The app's release signing keystore, base64-encoded on one line |
 | `STUDENT_ANDROID_RELEASE_KEYSTORE_PASSWORD` | That keystore's store/key password |
 | `STUDENT_ANDROID_RELEASE_KEY_ALIAS` | `jobkatta-release` |
@@ -40,21 +40,12 @@ download either.
 
 The workflow's "Tune Gradle build" step sets `reactNativeArchitectures=arm64-v8a` — dropping
 32-bit ARM support entirely, more aggressive than the admin app's arm64+armeabi-v7a. This app
-carries Firebase Auth + Razorpay Checkout on top of the same RN/Expo base, so it's heavier；
-virtually every phone a student owns today is 64-bit, so there's no real install base being cut
-off. This is the main lever keeping the APK near the ~50-60MB target — if a future measurement
-shows it's still too large, the next lever (not yet applied, since it carries real breakage risk
-for native modules without carefully written ProGuard rules) would be `minifyEnabled true` +
+carries the native Razorpay Checkout SDK on top of the same RN/Expo base, and virtually every
+phone a student owns today is 64-bit, so there's no real install base being cut off. This is the
+main lever keeping the APK near the ~50-60MB target — if a future measurement shows it's still
+too large, the next lever (not yet applied, since it carries real breakage risk for native
+modules without carefully written ProGuard rules) would be `minifyEnabled true` +
 `shrinkResources true` on the release build type.
-
-## Firebase Phone Auth: register this keystore's SHA fingerprints
-
-Firebase Phone Authentication's automatic SMS verification on Android checks the app's signing
-certificate. In the Firebase console → Project settings → your `com.jobalertbot.student` Android
-app → **Add fingerprint**, add both the SHA-1 and SHA-256 shown when the keystore was generated
-(see the keystore info file from setup, or re-run `keytool -list -v -keystore <file> -alias
-jobkatta-release` to see them again). Without this, phone auth still works but falls back to the
-reCAPTCHA verification flow more often instead of silent auto-verification.
 
 ## Point the app at your backend
 

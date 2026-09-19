@@ -37,6 +37,7 @@ export default function ProfileScreen() {
             <View>
               <Text className="font-heading text-ink text-[18px]">{user?.full_name ?? "-"}</Text>
               <Text className="text-muted text-[14px]">{user?.phone ?? "-"}</Text>
+              {user?.email ? <Text className="text-muted text-[13px]">{user.email}</Text> : null}
             </View>
           </View>
           <View className="mt-3 pt-3 border-t border-line">

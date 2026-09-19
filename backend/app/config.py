@@ -50,15 +50,6 @@ class Settings(BaseSettings):
     # ---------- Cloudinary (resume storage; optional, falls back to local disk) ----------
     CLOUDINARY_URL: str = ""
 
-    # ---------- Firebase (student app phone-auth ID token verification) ----------
-    # Raw JSON of a Firebase service account key (Project Settings -> Service accounts ->
-    # Generate new private key), as a single-line string - same single-env-var style as
-    # CLOUDINARY_URL above.
-    FIREBASE_SERVICE_ACCOUNT_JSON: str = ""
-
-    # ---------- Student app auth ----------
-    STUDENT_JWT_EXPIRE_HOURS: int = 24 * 30
-
     # ---------- GhostlyAI.in admin API (sister product, surfaced in the admin app) ----------
     GHOSTLY_API_BASE_URL: str = ""
     GHOSTLY_API_KEY: str = ""

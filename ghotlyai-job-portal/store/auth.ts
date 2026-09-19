@@ -7,7 +7,7 @@ import {
   type NextStep,
   type StudentOut,
   fetchMe,
-  loginWithPhone as apiLoginWithPhone,
+  signupWithResume as apiSignupWithResume,
   setAuthToken,
   setOnUnauthorized,
 } from "@/lib/api";
@@ -23,7 +23,7 @@ interface AuthState {
   user: StudentOut | null;
   nextStep: NextStep | null;
   hydrated: boolean;
-  loginWithPhone: (idToken: string) => Promise<AuthOut>;
+  signupWithResume: (file: { uri: string; name: string; mimeType?: string }) => Promise<AuthOut>;
   logout: () => void;
   refreshMe: () => Promise<void>;
   applyMe: (me: { user: StudentOut; next_step: NextStep }) => void;
@@ -38,8 +38,8 @@ export const useAuthStore = create<AuthState>()(
       nextStep: null,
       hydrated: false,
 
-      loginWithPhone: async (idToken) => {
-        const result = await apiLoginWithPhone(idToken);
+      signupWithResume: async (file) => {
+        const result = await apiSignupWithResume(file);
         setAuthToken(result.access_token);
         set({ token: result.access_token, user: result.user, nextStep: result.next_step });
         return result;

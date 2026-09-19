@@ -21,7 +21,7 @@ export default function JobTypesScreen() {
   return (
     <SafeAreaView className="flex-1 bg-background px-6" edges={["top", "bottom"]}>
       <View className="flex-1 pt-4">
-        <OnboardingProgress step={4} />
+        <OnboardingProgress step={3} />
         <Text className="font-display text-ink text-[26px] mb-2">What kind of jobs?</Text>
         <Text className="font-body text-muted text-[15px] mb-6">
           Pick as many as you like. Leave all unselected to see every type.

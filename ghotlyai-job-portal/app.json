@@ -54,7 +54,6 @@
           "color": "#EA580C"
         }
       ],
-      "@react-native-firebase/app",
       "./plugins/withReleaseSigning.js"
     ],
     "extra": {
